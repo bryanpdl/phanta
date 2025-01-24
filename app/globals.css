@@ -5,17 +5,72 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --font-onest: var(--font-onest);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f100f;
+    --foreground: #1f201f;
+    --accent: #2f302f;
+    --accent-shadow: #252625;
+    --accent-shadow-top: rgba(255, 255, 255, 0.03);
+    --primary: #F8712E;
+    --primary-shadow: #d2632b;
+    --primary-shadow-top: rgba(255, 255, 255, 0.55);
+    --container-shadow: #161716;
+    --container-shadow-top: rgba(255, 255, 255, 0.094);
   }
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-onest), system-ui, sans-serif;
+}
+
+.container-neumorphic {
+  background: var(--foreground);
+  box-shadow: 
+    inset 0 4px 2px var(--container-shadow-top),
+    inset 0 -12px 2px var(--container-shadow),
+    0 4px 8px rgba(0, 0, 0, 0.6);
+}
+
+.btn-primary {
+  background: var(--primary);
+  box-shadow: 
+    inset 0 1px 1px var(--primary-shadow-top),
+    inset 0 -4px 0 var(--primary-shadow);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(1px);
+  box-shadow: 
+    inset 0 3px 1px var(--primary-shadow-top),
+    inset 0 -6px 0 var(--primary-shadow);
+  filter: brightness(1.1);
+}
+
+.btn-primary:active {
+  transform: translateY(3px);
+  box-shadow: 
+    inset 0 1px 1px var(--primary-shadow-top),
+    inset 0 -1px 0 var(--primary-shadow);
+}
+
+.transaction-item {
+  background: var(--accent);
+  box-shadow: 
+    inset 0 0px 0px var(--accent-shadow-top),
+    inset 0 0 0 var(--accent-shadow);
+  transition: all 0.2s ease;
+}
+
+.transaction-item:hover {
+  box-shadow: 
+    inset 0 2px 2px var(--accent-shadow-top),
+    inset 0 -2px 2px var(--accent-shadow);
+  background: var(--accent);
 }
