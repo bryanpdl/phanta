@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { HiWifi, HiPaperAirplane } from "react-icons/hi";
-import { HiClipboard, HiClipboardCheck, HiExternalLink, HiClock, HiArrowUp, HiArrowDown } from "react-icons/hi";
+import { HiWifi, HiPaperAirplane, HiRefresh, HiArrowRight, HiArrowDown } from "react-icons/hi";
+import { HiClipboard, HiClipboardCheck, HiExternalLink, HiClock } from "react-icons/hi";
 import { HiArrowPath } from "react-icons/hi2";
-import { RiGhostSmileFill } from "react-icons/ri";
+import { PiButterflyFill } from "react-icons/pi";
 import { toast, Toaster } from "react-hot-toast";
 import { connectWallet, disconnectWallet, getBalance, getSolanaPrice, getRecentTransactions } from "../utils/phantom";
 import SendTransactionModal from "./SendTransactionModal";
+import ReceiveModal from "./ReceiveModal";
+import TransactionList from "./TransactionList";
 
 interface Transaction {
   signature: string;
@@ -29,8 +31,9 @@ const PhantomWallet = () => {
   const [solPrice, setSolPrice] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoadingTx, setIsLoadingTx] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
 
   // Fetch SOL price periodically
   useEffect(() => {
@@ -43,27 +46,30 @@ const PhantomWallet = () => {
       }
     };
 
-    // Fetch immediately
     fetchPrice();
-
-    // Then fetch every 60 seconds
     const interval = setInterval(fetchPrice, 60000);
-
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch initial balance when wallet is connected
+  useEffect(() => {
+    if (walletAddress) {
+      fetchBalance();
+    }
+  }, [walletAddress]);
 
   // Fetch transactions when wallet is connected
   useEffect(() => {
     const fetchTransactions = async () => {
       if (walletAddress) {
-        setIsLoadingTx(true);
+        setIsLoading(true);
         try {
           const txs = await getRecentTransactions(walletAddress);
           setTransactions(txs);
         } catch (error: any) {
           toast.error("Failed to fetch transactions");
         } finally {
-          setIsLoadingTx(false);
+          setIsLoading(false);
         }
       }
     };
@@ -94,12 +100,29 @@ const PhantomWallet = () => {
   };
 
   const fetchBalance = async () => {
-    try {
-      const balance = await getBalance();
-      setBalance(balance);
-      toast.success("Balance updated!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to fetch balance.");
+    if (walletAddress) {
+      try {
+        const bal = await getBalance();
+        setBalance(bal);
+        toast.success("Balance updated!");
+      } catch (error: any) {
+        toast.error(error.message || "Failed to fetch balance");
+      }
+    }
+  };
+
+  const fetchTransactions = async () => {
+    if (walletAddress) {
+      setIsLoading(true);
+      try {
+        const txs = await getRecentTransactions(walletAddress);
+        setTransactions(txs);
+        toast.success("Transactions refreshed!");
+      } catch (error: any) {
+        toast.error(error.message || "Failed to fetch transactions");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -175,10 +198,17 @@ const PhantomWallet = () => {
           senderAddress={walletAddress}
         />
       )}
+      {walletAddress && (
+        <ReceiveModal
+          isOpen={isReceiveModalOpen}
+          onClose={() => setIsReceiveModalOpen(false)}
+          walletAddress={walletAddress}
+        />
+      )}
       <div className="container-neumorphic p-8 rounded-2xl max-w-4xl w-full">
         <h1 className="text-3xl font-bold text-white/90 mb-8 text-left flex items-left justify-left gap-3">
-          <RiGhostSmileFill className="w-8 h-8 text-primary" />
-          phishy
+          <PiButterflyFill className="w-8 h-8 text-primary rotate-6" />
+          SOLmoth
         </h1>
         
         <div className="space-y-6">
@@ -215,17 +245,16 @@ const PhantomWallet = () => {
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-white/60 text-sm">Balance</p>
                   <button
-                    onClick={() => setIsSendModalOpen(true)}
-                    className="text-white/60 hover:text-white/90 transition-colors p-1 flex items-center gap-1"
-                    title="Send SOL"
+                    onClick={fetchBalance}
+                    className="text-white/60 hover:text-white/90 transition-colors p-1"
+                    title="Refresh Balance"
                   >
-                    <HiPaperAirplane className="w-4 h-4" />
-                    <span className="text-sm">Send</span>
+                    <HiRefresh className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-white/90 font-mono text-lg">
-                    {balance !== null ? `${balance} SOL` : "Not fetched"}
+                    {balance !== null ? `${balance.toFixed(4)} SOL` : "Loading..."}
                   </p>
                   {balance !== null && solPrice !== null && (
                     <p className="text-white/60 font-mono text-sm">
@@ -235,15 +264,26 @@ const PhantomWallet = () => {
                 </div>
               </div>
 
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsSendModalOpen(true)}
+                  className="flex-1 btn-primary text-white/90 font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                >
+                  Send
+                  <HiArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setIsReceiveModalOpen(true)}
+                  className="flex-1 btn-primary text-white/90 font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                >
+                  Receive
+                  <HiArrowDown className="w-4 h-4" />
+                </button>
+              </div>
+
               {/* Recent Transactions Section */}
               <div className="flex flex-col gap-3">
-                <button
-                  onClick={fetchBalance}
-                  className="w-full btn-primary text-white/90 font-medium py-2.5 px-4 rounded-lg transition-all"
-                >
-                  Get Balance
-                </button>
-
                 <div className="bg-accent rounded-lg p-4 mt-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -251,87 +291,18 @@ const PhantomWallet = () => {
                       <p className="text-white/90 font-medium">Recent Transactions</p>
                     </div>
                     <button
-                      onClick={async () => {
-                        if (walletAddress) {
-                          setIsLoadingTx(true);
-                          try {
-                            const txs = await getRecentTransactions(walletAddress);
-                            setTransactions(txs);
-                            toast.success("Transactions refreshed!");
-                          } catch (error: any) {
-                            toast.error("Failed to refresh transactions");
-                          } finally {
-                            setIsLoadingTx(false);
-                          }
-                        }
-                      }}
+                      onClick={fetchTransactions}
                       className="text-white/60 hover:text-white/90 transition-colors p-1"
-                      disabled={isLoadingTx}
                       title="Refresh transactions"
                     >
-                      <HiArrowPath className={`w-4 h-4 ${isLoadingTx ? 'animate-spin' : ''}`} />
+                      <HiRefresh className="w-4 h-4" />
                     </button>
                   </div>
                   
-                  {isLoadingTx ? (
+                  {isLoading ? (
                     <p className="text-white/60 text-sm text-center py-2">Loading transactions...</p>
                   ) : transactions.length > 0 ? (
-                    <div className="space-y-3">
-                      {transactions.map((tx) => (
-                        <div 
-                          key={tx.signature}
-                          className="group transaction-item flex items-center justify-between p-3 rounded-lg transition-all duration-200 cursor-pointer"
-                          onClick={() => window.open(`https://solscan.io/tx/${tx.signature}`, '_blank')}
-                        >
-                          <div className="flex items-center gap-2">
-                            {tx.type === "TRANSFER" ? (
-                              tx.amount ? (
-                                tx.amount > 0 ? (
-                                  <HiArrowDown className="w-4 h-4 text-green-400 group-hover:scale-110 transition-transform duration-200" />
-                                ) : (
-                                  <HiArrowUp className="w-4 h-4 text-red-400 group-hover:scale-110 transition-transform duration-200" />
-                                )
-                              ) : (
-                                <div className="w-4 h-4" />
-                              )
-                            ) : (
-                              <div className="w-4 h-4" />
-                            )}
-                            <div>
-                              <p className="text-white/90 text-sm font-medium group-hover:text-white transition-colors duration-200">
-                                {tx.type === "TRANSFER" && tx.amount 
-                                  ? `${tx.amount.toFixed(4)} SOL` 
-                                  : tx.type === "TOKEN" 
-                                  ? "Token Transfer"
-                                  : tx.type}
-                              </p>
-                              <p className="text-white/60 text-xs group-hover:text-white/80 transition-colors duration-200">
-                                {formatDate(tx.timestamp)}
-                              </p>
-                              {tx.security?.warning && (
-                                <p className={`text-xs mt-1 ${
-                                  tx.security.isDust 
-                                    ? "text-yellow-400" 
-                                    : tx.security.isSuspicious 
-                                    ? "text-red-400" 
-                                    : "text-white/60"
-                                }`}>
-                                  ⚠️ {tx.security.warning}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-white/60 text-xs font-mono group-hover:text-white/80 transition-colors duration-200">
-                              {shortenSignature(tx.signature)}
-                            </p>
-                            <p className={`text-xs ${tx.status === "Success" ? "text-green-400" : "text-red-400"} group-hover:brightness-110 transition-all duration-200`}>
-                              {tx.status}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <TransactionList transactions={transactions} isLoading={isLoading} />
                   ) : (
                     <p className="text-white/60 text-sm text-center py-2">No recent transactions</p>
                   )}

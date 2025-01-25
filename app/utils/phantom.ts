@@ -12,7 +12,7 @@ interface PhantomProvider {
   isConnected?: boolean;
 }
 
-interface Transaction {
+export interface Transaction {
   signature: string;
   timestamp: number;
   status: "Success" | "Failed";
@@ -70,6 +70,29 @@ const classifyTransaction = (tx: Transaction, senderAddress: string | null): Tra
 const connection = new Connection(
   `https://solana-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
 );
+
+// Fee configuration
+const NETWORK_FEE_ESTIMATE = 0.00015; // ~0.00015 SOL per transaction
+const MIN_FEE_SOL = 0.001; // Minimum fee base
+const BASE_FEE_PERCENTAGE = 0.003; // 0.3% fee
+const MIN_TRANSACTION_AMOUNT = 0.0023; // Minimum total transaction amount
+const FEE_RECIPIENT = new PublicKey("Ccjx1HT5x7NLertCeC8pBJFH2PMsNKYU4ayKFGGmGMfS");
+
+// Calculate fee with minimum threshold and network costs
+const calculateFee = (amount: number): number => {
+  if (amount < MIN_TRANSACTION_AMOUNT) {
+    throw new Error(`Minimum transaction amount is ${MIN_TRANSACTION_AMOUNT} SOL`);
+  }
+  
+  // Calculate base fee
+  const percentageFee = amount * BASE_FEE_PERCENTAGE;
+  
+  // Ensure fee covers network costs for both transactions plus a small buffer
+  const minimumRequired = MIN_FEE_SOL + (NETWORK_FEE_ESTIMATE * 2);
+  
+  // Return the larger of the percentage fee or minimum required
+  return Math.max(percentageFee, minimumRequired);
+};
 
 export const getProvider = (): PhantomProvider | undefined => {
   if (typeof window === "undefined") return undefined;
@@ -147,13 +170,36 @@ export const getBalance = async (): Promise<number> => {
     throw new Error("Wallet not connected.");
   }
 
-  try {
-    const balance = await connection.getBalance(provider.publicKey);
-    return balance / LAMPORTS_PER_SOL; // Use LAMPORTS_PER_SOL consistently
-  } catch (error) {
-    console.error("Failed to fetch balance:", error);
-    throw error;
+  const MAX_RETRIES = 3;
+  let lastError;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      // Add commitment level and proper error handling
+      const balance = await connection.getBalance(
+        provider.publicKey,
+        'confirmed'
+      );
+
+      // Validate the response
+      if (typeof balance !== 'number') {
+        throw new Error('Invalid balance response type');
+      }
+
+      return balance / LAMPORTS_PER_SOL;
+    } catch (error: any) {
+      console.warn(`Balance fetch attempt ${attempt + 1} failed:`, error);
+      lastError = error;
+      
+      // If this isn't our last attempt, wait before retrying
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
   }
+
+  // If all retries failed, throw the last error
+  throw new Error(`Failed to fetch balance after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
 };
 
 export const getSolanaPrice = async (): Promise<number> => {
@@ -170,65 +216,37 @@ export const getSolanaPrice = async (): Promise<number> => {
 };
 
 export const getRecentTransactions = async (address: string): Promise<Transaction[]> => {
-  try {
-    // Fetch recent signatures
-    const signatures = await connection.getSignaturesForAddress(
-      new PublicKey(address),
-      { limit: 5 }
-    );
+  const MAX_RETRIES = 3;
+  let lastError;
 
-    // Fetch full transaction details
-    const transactions = await Promise.all(
-      signatures.map(async (sig) => {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      // Fetch recent signatures with retry mechanism
+      const signatures = await connection.getSignaturesForAddress(
+        new PublicKey(address),
+        { limit: 5 }
+      );
+
+      // Process transactions sequentially to avoid rate limits
+      const transactions: Transaction[] = [];
+      
+      for (const sig of signatures) {
         try {
-          const tx = await connection.getParsedTransaction(sig.signature, {
-            maxSupportedTransactionVersion: 0,
-            commitment: 'confirmed'
-          }).catch(() => null);
-          
-          // If transaction fetch fails, return a basic transaction object
-          if (!tx || !tx.transaction?.message) {
-            return {
-              signature: sig.signature,
-              timestamp: sig.blockTime || Math.floor(Date.now() / 1000),
-              status: sig.err ? "Failed" : "Success",
-              type: "Unknown",
-              fee: 0,
-              security: {
-                isDust: false,
-                isSuspicious: false,
-                warning: ""
-              }
-            } as Transaction;
-          }
+          const tx = safelyParseResponse<ParsedTransactionWithMeta | null>(
+            await connection.getParsedTransaction(sig.signature, {
+              maxSupportedTransactionVersion: 0,
+              commitment: 'confirmed'
+            }),
+            null
+          );
 
-          let type = "Unknown";
-          let amount: number | undefined;
-          
-          // Determine transaction type and amount
-          if (tx.meta?.postTokenBalances?.length) {
-            type = "TOKEN";
-          } else if (tx.meta?.postBalances && tx.meta?.preBalances && tx.transaction.message.accountKeys) {
-            type = "TRANSFER";
-            // For transfers, we need to determine if we're the sender or receiver
-            const accountIndex = tx.transaction.message.accountKeys.findIndex(
-              key => key.pubkey.toString() === address
-            );
-            if (accountIndex !== undefined && accountIndex >= 0) {
-              const preBalance = tx.meta.preBalances[accountIndex];
-              const postBalance = tx.meta.postBalances[accountIndex];
-              const change = (postBalance - preBalance) / LAMPORTS_PER_SOL;
-              amount = change; // Keep the sign to indicate direction
-            }
-          }
-
-          const transaction: Transaction = {
+          // Create base transaction object
+          const baseTransaction: Transaction = {
             signature: sig.signature,
             timestamp: sig.blockTime || Math.floor(Date.now() / 1000),
             status: sig.err ? "Failed" : "Success",
-            type,
-            amount,
-            fee: (tx.meta?.fee || 0) / LAMPORTS_PER_SOL,
+            type: "Unknown",
+            fee: (tx?.meta?.fee || 0) / LAMPORTS_PER_SOL,
             security: {
               isDust: false,
               isSuspicious: false,
@@ -236,32 +254,70 @@ export const getRecentTransactions = async (address: string): Promise<Transactio
             }
           };
 
-          // Classify the transaction
-          if (amount !== undefined) {
-            if (Math.abs(amount) < DUST_THRESHOLD && amount > 0) {
-              transaction.security = {
-                isDust: true,
-                isSuspicious: false,
-                warning: `Incoming dust transaction detected (${amount.toFixed(9)} SOL). This might be spam - do not interact with any links.`
-              };
+          // If we can't get transaction data, return the base transaction
+          if (!tx?.meta || !tx.transaction?.message) {
+            transactions.push(baseTransaction);
+            continue;
+          }
+
+          // Process transaction details
+          const message = tx.transaction.message;
+          const accountKeys = message.accountKeys;
+          const myAccountIndex = accountKeys.findIndex(
+            key => key.pubkey.toString() === address
+          );
+
+          if (myAccountIndex === -1) {
+            transactions.push(baseTransaction);
+            continue;
+          }
+
+          // Calculate amount
+          let amount: number | undefined;
+          if (tx.meta.preBalances && tx.meta.postBalances) {
+            const preBalance = tx.meta.preBalances[myAccountIndex];
+            const postBalance = tx.meta.postBalances[myAccountIndex];
+            if (typeof preBalance === 'number' && typeof postBalance === 'number') {
+              amount = (postBalance - preBalance) / LAMPORTS_PER_SOL;
             }
           }
 
-          if (type === "TOKEN") {
-            transaction.security = {
-              isDust: false,
-              isSuspicious: true,
-              warning: "Unknown token transaction. Be cautious with unfamiliar tokens."
-            };
+          // Determine transaction type
+          let type = "Unknown";
+          const hasTokenBalances = tx.meta.postTokenBalances && tx.meta.postTokenBalances.length > 0;
+          if (hasTokenBalances) {
+            type = "TOKEN";
+          } else if (amount !== undefined) {
+            type = "TRANSFER";
           }
 
-          return transaction;
-        } catch (error) {
-          console.error(`Failed to fetch transaction ${sig.signature}:`, error);
-          return {
+          // Create final transaction object with security info
+          const transaction: Transaction = {
+            ...baseTransaction,
+            type,
+            amount,
+            security: {
+              isDust: amount !== undefined && Math.abs(amount) < DUST_THRESHOLD && amount > 0,
+              isSuspicious: type === "TOKEN",
+              warning: type === "TOKEN" 
+                ? "Unknown token transaction. Be cautious with unfamiliar tokens."
+                : amount !== undefined && Math.abs(amount) < DUST_THRESHOLD && amount > 0
+                  ? `Incoming dust transaction detected (${amount.toFixed(9)} SOL). This might be spam - do not interact with any links.`
+                  : ""
+            }
+          };
+
+          transactions.push(transaction);
+          
+          // Add a small delay between requests to avoid rate limits
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+        } catch (txError) {
+          console.warn(`Failed to fetch transaction ${sig.signature}:`, txError);
+          transactions.push({
             signature: sig.signature,
             timestamp: sig.blockTime || Math.floor(Date.now() / 1000),
-            status: "Failed" as const,
+            status: "Failed",
             type: "Unknown",
             fee: 0,
             security: {
@@ -269,16 +325,76 @@ export const getRecentTransactions = async (address: string): Promise<Transactio
               isSuspicious: false,
               warning: ""
             }
-          };
+          });
         }
-      })
-    );
+      }
 
-    return transactions;
-  } catch (error) {
-    console.error("Failed to fetch transactions:", error);
-    throw error;
+      return transactions;
+      
+    } catch (error: any) {
+      console.warn(`Transaction fetch attempt ${attempt + 1} failed:`, error);
+      lastError = error;
+      
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
   }
+
+  throw new Error(`Failed to fetch transactions after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
+};
+
+// Helper function to safely parse RPC response
+const safelyParseResponse = <T>(response: any, defaultValue: T): T => {
+  try {
+    if (response === null || response === undefined) return defaultValue;
+    if (typeof response === 'object' && 'value' in response) return response.value;
+    return response as T;
+  } catch {
+    return defaultValue;
+  }
+};
+
+// Helper function to get balance with retries
+const getBalanceWithRetry = async (publicKey: PublicKey): Promise<number> => {
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const response = await connection.getBalance(publicKey, 'confirmed');
+      return safelyParseResponse<number>(response, 0);
+    } catch (error) {
+      console.warn(`Balance fetch attempt ${attempt + 1} failed:`, error);
+      lastError = error instanceof Error ? error : new Error('Unknown error during balance fetch');
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
+  }
+  throw new Error(`Failed to get balance after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
+};
+
+// Helper function to get blockhash with retries
+const getBlockhashWithRetry = async (): Promise<string> => {
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const { blockhash } = await connection.getLatestBlockhash({
+        commitment: 'confirmed'
+      });
+      return blockhash;
+    } catch (error) {
+      console.warn(`Blockhash fetch attempt ${attempt + 1} failed:`, error);
+      lastError = error instanceof Error ? error : new Error('Unknown error during blockhash fetch');
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
+  }
+  throw new Error(`Failed to get blockhash after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
 };
 
 export const sendTransaction = async (recipientAddress: string, amount: number): Promise<string> => {
@@ -305,64 +421,72 @@ export const sendTransaction = async (recipientAddress: string, amount: number):
       throw new Error("Amount must be greater than 0");
     }
 
-    // Check if user has enough balance
-    const balance = await connection.getBalance(provider.publicKey);
-    const lamports = amount * LAMPORTS_PER_SOL;
-    if (balance < lamports) {
-      throw new Error("Insufficient balance");
+    // Calculate fee and amounts
+    const feeAmount = calculateFee(amount);
+    const recipientAmount = amount - feeAmount;
+    const recipientLamports = Math.floor(recipientAmount * LAMPORTS_PER_SOL);
+    const feeLamports = Math.floor(feeAmount * LAMPORTS_PER_SOL);
+
+    // Check balance with retry
+    const balance = await getBalanceWithRetry(provider.publicKey);
+    const totalLamports = recipientLamports + feeLamports;
+    if (balance < totalLamports) {
+      throw new Error("Insufficient balance (including service fee)");
     }
 
-    // Create transaction
-    const transaction = new SolanaTransaction();
-    
-    // Get latest blockhash
-    const { blockhash } = await connection.getLatestBlockhash();
-    
-    // Add transfer instruction
-    transaction.add(
+    // Get blockhash with retry for main transaction
+    const blockhash = await getBlockhashWithRetry();
+
+    // Create and send main transfer transaction
+    const mainTransaction = new SolanaTransaction();
+    mainTransaction.add(
       SystemProgram.transfer({
         fromPubkey: provider.publicKey,
         toPubkey: recipient,
-        lamports,
+        lamports: recipientLamports,
       })
     );
+    mainTransaction.recentBlockhash = blockhash;
+    mainTransaction.feePayer = provider.publicKey;
 
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = provider.publicKey;
+    console.log("Sending main transaction...");
+    const { signature: mainSignature } = await provider.signAndSendTransaction(mainTransaction);
+    console.log("Main transaction sent:", mainSignature);
 
-    // Sign and send transaction
-    console.log("Sending transaction...");
-    const { signature } = await provider.signAndSendTransaction(transaction);
-    console.log("Transaction sent:", signature);
-
-    // Simple confirmation check
-    let retries = 30;
-    while (retries > 0) {
-      try {
-        const status = await connection.getSignatureStatus(signature);
-        
-        if (status?.value?.err) {
-          throw new Error(`Transaction failed: ${status.value.err}`);
-        }
-        
-        if (status?.value?.confirmationStatus === 'confirmed' || 
-            status?.value?.confirmationStatus === 'finalized') {
-          console.log("Transaction confirmed:", signature);
-          return signature;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        retries--;
-      } catch (error) {
-        if (retries === 0) throw error;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        retries--;
-      }
+    // Wait for main transaction confirmation
+    const mainStatus = await waitForConfirmation(mainSignature);
+    if (!mainStatus) {
+      throw new Error("Main transaction failed to confirm");
     }
 
-    // If we get here but haven't thrown an error, the transaction might still be processing
-    console.log("Transaction may still be processing. Please check the signature:", signature);
-    return signature;
+    // Get fresh blockhash with retry for fee transaction
+    const feeBlockhash = await getBlockhashWithRetry();
+
+    // Create and send fee transfer transaction
+    const feeTransaction = new SolanaTransaction();
+    feeTransaction.add(
+      SystemProgram.transfer({
+        fromPubkey: provider.publicKey,
+        toPubkey: FEE_RECIPIENT,
+        lamports: feeLamports,
+      })
+    );
+    
+    feeTransaction.recentBlockhash = feeBlockhash;
+    feeTransaction.feePayer = provider.publicKey;
+
+    console.log("Sending fee transaction...");
+    const { signature: feeSignature } = await provider.signAndSendTransaction(feeTransaction);
+    console.log("Fee transaction sent:", feeSignature);
+
+    // Wait for fee transaction confirmation
+    const feeStatus = await waitForConfirmation(feeSignature);
+    if (!feeStatus) {
+      console.warn("Fee transaction failed to confirm");
+      // We don't throw here as the main transaction was successful
+    }
+
+    return mainSignature;
 
   } catch (error: any) {
     console.error("Transaction failed:", error);
@@ -371,4 +495,34 @@ export const sendTransaction = async (recipientAddress: string, amount: number):
     }
     throw new Error(error.message || "Failed to send transaction");
   }
+};
+
+// Helper function to wait for transaction confirmation
+const waitForConfirmation = async (signature: string): Promise<boolean> => {
+  let retries = 30;
+  while (retries > 0) {
+    try {
+      const status = await connection.getSignatureStatus(signature);
+      
+      if (status?.value?.err) {
+        console.error(`Transaction ${signature} failed:`, status.value.err);
+        return false;
+      }
+      
+      if (status?.value?.confirmationStatus === 'confirmed' || 
+          status?.value?.confirmationStatus === 'finalized') {
+        console.log("Transaction confirmed:", signature);
+        return true;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      retries--;
+    } catch (error) {
+      console.warn(`Error checking status for ${signature}:`, error);
+      if (retries === 0) return false;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      retries--;
+    }
+  }
+  return false;
 };

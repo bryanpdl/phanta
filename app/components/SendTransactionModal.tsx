@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HiX, HiArrowRight } from "react-icons/hi";
 import { toast } from "react-hot-toast";
-import { sendTransaction } from "../utils/phantom";
+import { sendTransaction, getBalance } from "../utils/phantom";
 
 interface SendTransactionModalProps {
   isOpen: boolean;
@@ -15,6 +15,43 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactio
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [currentBalance, setCurrentBalance] = useState<number | null>(null);
+  const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
+
+  // Fetch initial balance
+  useEffect(() => {
+    if (isOpen) {
+      const fetchBalance = async () => {
+        try {
+          const balance = await getBalance();
+          setCurrentBalance(balance);
+        } catch (error) {
+          console.error("Failed to fetch balance:", error);
+        }
+      };
+      fetchBalance();
+    }
+  }, [isOpen]);
+
+  // Check balance when amount changes
+  useEffect(() => {
+    if (!amount) {
+      setHasInsufficientBalance(false);
+      return;
+    }
+    
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || !currentBalance) {
+      setHasInsufficientBalance(false);
+      return;
+    }
+
+    // Calculate total needed including maximum service fee (0.3% or minimum)
+    const serviceFee = Math.max(parsedAmount * 0.003, 0.001 + 0.0003);
+    const totalNeeded = parsedAmount + serviceFee;
+
+    setHasInsufficientBalance(totalNeeded > currentBalance);
+  }, [amount, currentBalance]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,22 +116,46 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactio
             <label htmlFor="amount" className="block text-white/60 text-sm mb-1">
               Amount (SOL)
             </label>
-            <input
-              id="amount"
-              type="number"
-              step="any"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-accent rounded-lg p-3 text-white/90 font-mono text-sm border border-transparent focus:border-primary/50 focus:outline-none transition-colors"
-              placeholder="0.0"
-              required
-            />
+            <div className="relative">
+              <input
+                id="amount"
+                type="number"
+                step="any"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className={`w-full bg-accent rounded-lg p-3 text-white/90 font-mono text-sm border border-transparent focus:border-primary/50 focus:outline-none transition-colors ${
+                  hasInsufficientBalance ? 'border-red-500' : ''
+                }`}
+                placeholder="0.0"
+                min="0.0023"
+                required
+              />
+              {hasInsufficientBalance && (
+                <p className="absolute -bottom-6 left-0 text-red-500 text-xs">
+                  Insufficient balance (including service fee)
+                </p>
+              )}
+            </div>
+            {amount && (
+              <div className={`space-y-1 ${hasInsufficientBalance ? 'mt-8' : 'mt-4'}`}>
+                <p className="text-white/60 text-xs">
+                  Service fee: {Math.max(parseFloat(amount) * 0.003, 0.001 + 0.0003).toFixed(6)} SOL
+                  {parseFloat(amount) * 0.003 < (0.001 + 0.0003) && " (minimum fee)"}
+                </p>
+                <p className="text-white/60 text-xs">
+                  Includes network fees for 2 transactions (~0.00015 SOL each)
+                </p>
+                <p className="text-white/40 text-xs">
+                  Minimum transaction amount: 0.0023 SOL
+                </p>
+              </div>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full btn-primary text-white/90 font-medium py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            disabled={isLoading || hasInsufficientBalance}
+            className="w-full btn-primary text-white/90 font-medium py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               "Sending..."
