@@ -6,7 +6,7 @@ import { HiClipboard, HiClipboardCheck, HiExternalLink, HiClock } from "react-ic
 import { HiArrowPath } from "react-icons/hi2";
 import { PiButterflyFill } from "react-icons/pi";
 import { toast, Toaster } from "react-hot-toast";
-import { connectWallet, disconnectWallet, getBalance, getSolanaPrice, getRecentTransactions } from "../utils/phantom";
+import { connectWallet, disconnectWallet, getBalance, getSolanaPrice, getRecentTransactions, getTokenBalances, type TokenBalance } from "../utils/phantom";
 import SendTransactionModal from "./SendTransactionModal";
 import ReceiveModal from "./ReceiveModal";
 import TransactionList from "./TransactionList";
@@ -28,6 +28,7 @@ interface Transaction {
 const PhantomWallet = () => {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
   const [solPrice, setSolPrice] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -51,10 +52,11 @@ const PhantomWallet = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch initial balance when wallet is connected
+  // Fetch initial balance and tokens when wallet is connected
   useEffect(() => {
     if (walletAddress) {
       fetchBalance();
+      fetchTokenBalances();
     }
   }, [walletAddress]);
 
@@ -107,6 +109,17 @@ const PhantomWallet = () => {
         toast.success("Balance updated!");
       } catch (error: any) {
         toast.error(error.message || "Failed to fetch balance");
+      }
+    }
+  };
+
+  const fetchTokenBalances = async () => {
+    if (walletAddress) {
+      try {
+        const balances = await getTokenBalances();
+        setTokenBalances(balances);
+      } catch (error: any) {
+        console.error("Failed to fetch token balances:", error);
       }
     }
   };
@@ -241,27 +254,57 @@ const PhantomWallet = () => {
                 <p className="text-white/90 font-mono text-sm break-all">{walletAddress}</p>
               </div>
               
-              <div className="bg-accent rounded-lg p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-white/60 text-sm">Balance</p>
-                  <button
-                    onClick={fetchBalance}
-                    className="text-white/60 hover:text-white/90 transition-colors p-1"
-                    title="Refresh Balance"
-                  >
-                    <HiRefresh className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-white/90 font-mono text-lg">
-                    {balance !== null ? `${balance.toFixed(4)} SOL` : "Loading..."}
-                  </p>
-                  {balance !== null && solPrice !== null && (
-                    <p className="text-white/60 font-mono text-sm">
-                      {formatUSD(balance * solPrice)}
+              <div className="space-y-4">
+                {/* SOL Balance */}
+                <div className="bg-accent rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-white/60 text-sm">SOL Balance</p>
+                    <button
+                      onClick={() => {
+                        fetchBalance();
+                        fetchTokenBalances();
+                      }}
+                      className="text-white/60 hover:text-white/90 transition-colors p-1"
+                      title="Refresh Balances"
+                    >
+                      <HiRefresh className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-white/90 font-mono text-lg">
+                      {balance !== null ? `${balance.toFixed(4)} SOL` : "Loading..."}
                     </p>
-                  )}
+                    {balance !== null && solPrice !== null && (
+                      <p className="text-white/60 font-mono text-sm">
+                        {formatUSD(balance * solPrice)}
+                      </p>
+                    )}
+                  </div>
                 </div>
+
+                {/* Token Balances */}
+                {tokenBalances.length > 0 && (
+                  <div className="bg-accent/50 rounded-lg divide-y divide-white/5">
+                    {tokenBalances.map((token) => (
+                      <div key={token.mint} className="p-4 first:rounded-t-lg last:rounded-b-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {token.logoURI && (
+                              <img
+                                src={token.logoURI}
+                                alt={token.symbol}
+                                className="w-5 h-5 rounded-full"
+                              />
+                            )}
+                            <p className="text-white/90 font-mono">
+                              {token.balance.toFixed(4)} {token.symbol}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

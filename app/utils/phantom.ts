@@ -1,4 +1,5 @@
 import { Connection, PublicKey, ParsedTransactionWithMeta, SystemProgram, LAMPORTS_PER_SOL, Transaction as SolanaTransaction, clusterApiUrl } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 interface PhantomProvider {
   isPhantom: boolean;
@@ -24,6 +25,15 @@ export interface Transaction {
     isSuspicious: boolean;
     warning: string;
   };
+}
+
+export interface TokenBalance {
+  mint: string;
+  symbol: string;
+  balance: number;
+  decimals: number;
+  usdValue?: number;
+  logoURI?: string;
 }
 
 // Security thresholds and checks
@@ -108,9 +118,9 @@ export const getProvider = (): PhantomProvider | undefined => {
 
 export const connectWallet = async (): Promise<string | null> => {
   try {
-    const provider = getProvider();
+  const provider = getProvider();
     
-    if (!provider) {
+  if (!provider) {
       window.open("https://phantom.app/", "_blank");
       throw new Error("Please install Phantom Wallet to continue.");
     }
@@ -150,13 +160,13 @@ export const disconnectWallet = async (): Promise<void> => {
     throw new Error("Phantom Wallet is not installed.");
   }
 
-  try {
+    try {
     provider.removeAllListeners("disconnect");
     provider.removeAllListeners("accountChanged");
-    await provider.disconnect();
-  } catch (error) {
-    console.error("Failed to disconnect from Phantom Wallet:", error);
-    throw error;
+      await provider.disconnect();
+    } catch (error) {
+      console.error("Failed to disconnect from Phantom Wallet:", error);
+      throw error;
   }
 };
 
@@ -525,4 +535,59 @@ const waitForConfirmation = async (signature: string): Promise<boolean> => {
     }
   }
   return false;
+};
+
+export const getTokenBalances = async (): Promise<TokenBalance[]> => {
+  const provider = getProvider();
+  if (!provider?.publicKey) {
+    throw new Error("Wallet not connected.");
+  }
+
+  try {
+    // Fetch all token accounts
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      provider.publicKey,
+      { programId: TOKEN_PROGRAM_ID },
+      'confirmed'
+    );
+
+    // Filter accounts with non-zero balance
+    const nonZeroAccounts = tokenAccounts.value.filter(
+      account => account.account.data.parsed.info.tokenAmount.uiAmount > 0
+    );
+
+    // Fetch token metadata from Jupiter API
+    const response = await fetch('https://token.jup.ag/all');
+    const tokenList = await response.json();
+    
+    // Map token accounts to TokenBalance interface
+    const balances = await Promise.all(
+      nonZeroAccounts.map(async (account) => {
+        const parsedInfo = account.account.data.parsed.info;
+        const mintAddress = parsedInfo.mint;
+        const tokenInfo = tokenList.find((t: any) => t.address === mintAddress);
+        
+        if (!tokenInfo) return null;
+
+        const tokenBalance: TokenBalance = {
+          mint: mintAddress,
+          symbol: tokenInfo.symbol,
+          balance: parsedInfo.tokenAmount.uiAmount,
+          decimals: parsedInfo.tokenAmount.decimals,
+          logoURI: tokenInfo.logoURI
+        };
+
+        return tokenBalance;
+      })
+    );
+
+    // Filter out null values and sort by balance
+    return balances
+      .filter((b): b is TokenBalance => b !== null)
+      .sort((a, b) => b.balance - a.balance);
+
+  } catch (error) {
+    console.error("Failed to fetch token balances:", error);
+    throw error;
+  }
 };
