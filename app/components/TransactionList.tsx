@@ -2,10 +2,10 @@
 
 import React from "react";
 import { HiArrowUp, HiArrowDown } from "react-icons/hi";
-import { Transaction } from "../utils/phantom";
+import { TransactionInfo } from "../utils/phantom";
 
 interface TransactionListProps {
-  transactions: Transaction[];
+  transactions: TransactionInfo[];
   isLoading: boolean;
 }
 

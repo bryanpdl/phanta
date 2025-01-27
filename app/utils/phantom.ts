@@ -1,4 +1,4 @@
-import { Connection, PublicKey, ParsedTransactionWithMeta, SystemProgram, LAMPORTS_PER_SOL, Transaction as SolanaTransaction, clusterApiUrl } from "@solana/web3.js";
+import { Connection, PublicKey, Transaction as SolanaTransaction, SystemProgram, LAMPORTS_PER_SOL, TransactionInstruction } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 interface PhantomProvider {
@@ -13,7 +13,7 @@ interface PhantomProvider {
   isConnected?: boolean;
 }
 
-export interface Transaction {
+export interface TransactionInfo {
   signature: string;
   timestamp: number;
   status: "Success" | "Failed";
@@ -47,7 +47,7 @@ const SUSPICIOUS_PATTERNS = [
   "winner"
 ];
 
-const classifyTransaction = (tx: Transaction, senderAddress: string | null): Transaction => {
+const classifyTransaction = (tx: TransactionInfo, senderAddress: string | null): TransactionInfo => {
   const security = {
     isDust: false,
     isSuspicious: false,
@@ -76,12 +76,18 @@ const classifyTransaction = (tx: Transaction, senderAddress: string | null): Tra
   };
 };
 
-// Create a reliable connection using Alchemy's RPC
+// Create a reliable connection using Alchemy's RPC with proper WebSocket config
 const connection = new Connection(
-  `https://solana-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+  `https://solana-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+  {
+    commitment: "confirmed",
+    wsEndpoint: `wss://solana-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+    confirmTransactionInitialTimeout: 60000,
+    disableRetryOnRateLimit: false
+  }
 );
 
-// Fee configuration
+// Fee configuration - single source of truth
 const NETWORK_FEE_ESTIMATE = 0.00015; // ~0.00015 SOL per transaction
 const MIN_FEE_SOL = 0.001; // Minimum fee base
 const BASE_FEE_PERCENTAGE = 0.003; // 0.3% fee
@@ -225,38 +231,33 @@ export const getSolanaPrice = async (): Promise<number> => {
   }
 };
 
-export const getRecentTransactions = async (address: string): Promise<Transaction[]> => {
+export const getRecentTransactions = async (address: string): Promise<TransactionInfo[]> => {
   const MAX_RETRIES = 3;
   let lastError;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      // Fetch recent signatures with retry mechanism
       const signatures = await connection.getSignaturesForAddress(
         new PublicKey(address),
         { limit: 5 }
       );
 
-      // Process transactions sequentially to avoid rate limits
-      const transactions: Transaction[] = [];
+      const transactions: TransactionInfo[] = [];
       
       for (const sig of signatures) {
         try {
-          const tx = safelyParseResponse<ParsedTransactionWithMeta | null>(
-            await connection.getParsedTransaction(sig.signature, {
-              maxSupportedTransactionVersion: 0,
-              commitment: 'confirmed'
-            }),
-            null
-          );
+          const parsedTx = await connection.getParsedTransaction(sig.signature, {
+            maxSupportedTransactionVersion: 0,
+            commitment: 'confirmed'
+          });
 
-          // Create base transaction object
-          const baseTransaction: Transaction = {
+          // Create base transaction info
+          const baseTransaction: TransactionInfo = {
             signature: sig.signature,
             timestamp: sig.blockTime || Math.floor(Date.now() / 1000),
             status: sig.err ? "Failed" : "Success",
             type: "Unknown",
-            fee: (tx?.meta?.fee || 0) / LAMPORTS_PER_SOL,
+            fee: (parsedTx?.meta?.fee || 0) / LAMPORTS_PER_SOL,
             security: {
               isDust: false,
               isSuspicious: false,
@@ -265,17 +266,15 @@ export const getRecentTransactions = async (address: string): Promise<Transactio
           };
 
           // If we can't get transaction data, return the base transaction
-          if (!tx?.meta || !tx.transaction?.message) {
+          if (!parsedTx?.meta || !parsedTx.transaction) {
             transactions.push(baseTransaction);
             continue;
           }
 
           // Process transaction details
-          const message = tx.transaction.message;
-          const accountKeys = message.accountKeys;
-          const myAccountIndex = accountKeys.findIndex(
-            key => key.pubkey.toString() === address
-          );
+          const message = parsedTx.transaction.message;
+          const accountKeys = message.accountKeys.map(key => key.pubkey.toString());
+          const myAccountIndex = accountKeys.indexOf(address);
 
           if (myAccountIndex === -1) {
             transactions.push(baseTransaction);
@@ -284,9 +283,12 @@ export const getRecentTransactions = async (address: string): Promise<Transactio
 
           // Calculate amount
           let amount: number | undefined;
-          if (tx.meta.preBalances && tx.meta.postBalances) {
-            const preBalance = tx.meta.preBalances[myAccountIndex];
-            const postBalance = tx.meta.postBalances[myAccountIndex];
+          const preBalances = parsedTx.meta.preBalances;
+          const postBalances = parsedTx.meta.postBalances;
+          
+          if (preBalances && postBalances) {
+            const preBalance = preBalances[myAccountIndex];
+            const postBalance = postBalances[myAccountIndex];
             if (typeof preBalance === 'number' && typeof postBalance === 'number') {
               amount = (postBalance - preBalance) / LAMPORTS_PER_SOL;
             }
@@ -294,15 +296,17 @@ export const getRecentTransactions = async (address: string): Promise<Transactio
 
           // Determine transaction type
           let type = "Unknown";
-          const hasTokenBalances = tx.meta.postTokenBalances && tx.meta.postTokenBalances.length > 0;
+          const hasTokenBalances = parsedTx.meta.postTokenBalances && 
+                                 parsedTx.meta.postTokenBalances.length > 0;
+          
           if (hasTokenBalances) {
             type = "TOKEN";
           } else if (amount !== undefined) {
             type = "TRANSFER";
           }
 
-          // Create final transaction object with security info
-          const transaction: Transaction = {
+          // Create final transaction info with security classification
+          const transaction: TransactionInfo = {
             ...baseTransaction,
             type,
             amount,
@@ -318,8 +322,6 @@ export const getRecentTransactions = async (address: string): Promise<Transactio
           };
 
           transactions.push(transaction);
-          
-          // Add a small delay between requests to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, 100));
           
         } catch (txError) {
@@ -407,134 +409,73 @@ const getBlockhashWithRetry = async (): Promise<string> => {
   throw new Error(`Failed to get blockhash after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
 };
 
-export const sendTransaction = async (recipientAddress: string, amount: number): Promise<string> => {
+export const sendTransaction = async (recipientAddress: string, amount: number) => {
   try {
-    const provider = getProvider();
-    if (!provider) {
-      throw new Error("Phantom Wallet is not installed.");
+    if (!window.phantom?.solana?.isConnected) {
+      throw new Error("Phantom wallet is not connected");
     }
 
-    if (!provider.publicKey) {
-      throw new Error("Wallet not connected.");
-    }
+    // Calculate fee (greater of percentage or minimum fee)
+    const feeAmount = Math.max(
+      amount * BASE_FEE_PERCENTAGE,
+      MIN_FEE_SOL
+    );
+    const feeLamports = feeAmount * LAMPORTS_PER_SOL;
+    const amountLamports = amount * LAMPORTS_PER_SOL;
 
-    // Validate recipient address
-    let recipient: PublicKey;
-    try {
-      recipient = new PublicKey(recipientAddress);
-    } catch (error) {
-      throw new Error("Invalid recipient address");
-    }
+    // Get the sender's public key
+    const fromPubkey = window.phantom.solana.publicKey;
+    const toPubkey = new PublicKey(recipientAddress);
 
-    // Validate amount
-    if (amount <= 0) {
-      throw new Error("Amount must be greater than 0");
-    }
+    // Create instructions for both transfers
+    const transferToRecipient = SystemProgram.transfer({
+      fromPubkey,
+      toPubkey,
+      lamports: amountLamports - feeLamports // Subtract fee from main transfer
+    });
 
-    // Calculate fee and amounts
-    const feeAmount = calculateFee(amount);
-    const recipientAmount = amount - feeAmount;
-    const recipientLamports = Math.floor(recipientAmount * LAMPORTS_PER_SOL);
-    const feeLamports = Math.floor(feeAmount * LAMPORTS_PER_SOL);
+    const transferFee = SystemProgram.transfer({
+      fromPubkey,
+      toPubkey: FEE_RECIPIENT,
+      lamports: feeLamports
+    });
 
-    // Check balance with retry
-    const balance = await getBalanceWithRetry(provider.publicKey);
-    const totalLamports = recipientLamports + feeLamports;
-    if (balance < totalLamports) {
-      throw new Error("Insufficient balance (including service fee)");
-    }
-
-    // Get blockhash with retry for main transaction
+    // Get recent blockhash with retry
     const blockhash = await getBlockhashWithRetry();
 
-    // Create and send main transfer transaction
-    const mainTransaction = new SolanaTransaction();
-    mainTransaction.add(
-      SystemProgram.transfer({
-        fromPubkey: provider.publicKey,
-        toPubkey: recipient,
-        lamports: recipientLamports,
-      })
-    );
-    mainTransaction.recentBlockhash = blockhash;
-    mainTransaction.feePayer = provider.publicKey;
+    // Create transaction with both instructions
+    const transaction = new SolanaTransaction({
+      recentBlockhash: blockhash,
+      feePayer: fromPubkey
+    }).add(transferToRecipient, transferFee);
 
-    console.log("Sending main transaction...");
-    const { signature: mainSignature } = await provider.signAndSendTransaction(mainTransaction);
-    console.log("Main transaction sent:", mainSignature);
-
-    // Wait for main transaction confirmation
-    const mainStatus = await waitForConfirmation(mainSignature);
-    if (!mainStatus) {
-      throw new Error("Main transaction failed to confirm");
-    }
-
-    // Get fresh blockhash with retry for fee transaction
-    const feeBlockhash = await getBlockhashWithRetry();
-
-    // Create and send fee transfer transaction
-    const feeTransaction = new SolanaTransaction();
-    feeTransaction.add(
-      SystemProgram.transfer({
-        fromPubkey: provider.publicKey,
-        toPubkey: FEE_RECIPIENT,
-        lamports: feeLamports,
-      })
-    );
+    // Sign and send transaction
+    const signedTransaction = await window.phantom.solana.signTransaction(transaction);
+    const rawTransaction = signedTransaction.serialize();
     
-    feeTransaction.recentBlockhash = feeBlockhash;
-    feeTransaction.feePayer = provider.publicKey;
+    // Send with proper options
+    const signature = await connection.sendRawTransaction(rawTransaction, {
+      skipPreflight: false,
+      preflightCommitment: 'confirmed',
+      maxRetries: 3
+    });
 
-    console.log("Sending fee transaction...");
-    const { signature: feeSignature } = await provider.signAndSendTransaction(feeTransaction);
-    console.log("Fee transaction sent:", feeSignature);
+    // Confirm with proper options
+    const confirmation = await connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight: (await connection.getLatestBlockhash()).lastValidBlockHeight
+    }, 'confirmed');
 
-    // Wait for fee transaction confirmation
-    const feeStatus = await waitForConfirmation(feeSignature);
-    if (!feeStatus) {
-      console.warn("Fee transaction failed to confirm");
-      // We don't throw here as the main transaction was successful
+    if (confirmation.value.err) {
+      throw new Error(`Transaction failed: ${confirmation.value.err}`);
     }
 
-    return mainSignature;
-
+    return signature;
   } catch (error: any) {
-    console.error("Transaction failed:", error);
-    if (error?.message?.includes("User rejected")) {
-      throw new Error("Transaction was rejected by user");
-    }
-    throw new Error(error.message || "Failed to send transaction");
+    console.error("Transaction error:", error);
+    throw new Error(error.message || "Transaction failed");
   }
-};
-
-// Helper function to wait for transaction confirmation
-const waitForConfirmation = async (signature: string): Promise<boolean> => {
-  let retries = 30;
-  while (retries > 0) {
-    try {
-      const status = await connection.getSignatureStatus(signature);
-      
-      if (status?.value?.err) {
-        console.error(`Transaction ${signature} failed:`, status.value.err);
-        return false;
-      }
-      
-      if (status?.value?.confirmationStatus === 'confirmed' || 
-          status?.value?.confirmationStatus === 'finalized') {
-        console.log("Transaction confirmed:", signature);
-        return true;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      retries--;
-    } catch (error) {
-      console.warn(`Error checking status for ${signature}:`, error);
-      if (retries === 0) return false;
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      retries--;
-    }
-  }
-  return false;
 };
 
 export const getTokenBalances = async (): Promise<TokenBalance[]> => {
@@ -591,3 +532,15 @@ export const getTokenBalances = async (): Promise<TokenBalance[]> => {
     throw error;
   }
 };
+
+declare global {
+  interface Window {
+    phantom?: {
+      solana?: {
+        isConnected: boolean;
+        publicKey: PublicKey;
+        signTransaction(transaction: SolanaTransaction): Promise<SolanaTransaction>;
+      };
+    };
+  }
+}
