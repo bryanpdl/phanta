@@ -142,9 +142,6 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactio
                   Service fee: {Math.max(parseFloat(amount) * 0.003, 0.001 + 0.0003).toFixed(6)} SOL
                   {parseFloat(amount) * 0.003 < (0.001 + 0.0003) && " (minimum fee)"}
                 </p>
-                <p className="text-white/60 text-xs">
-                  Includes network fees for 2 transactions (~0.00015 SOL each)
-                </p>
                 <p className="text-white/40 text-xs">
                   Minimum transaction amount: 0.0023 SOL
                 </p>

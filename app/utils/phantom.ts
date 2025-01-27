@@ -36,6 +36,33 @@ export interface TokenBalance {
   logoURI?: string;
 }
 
+// Add these interfaces after the existing interfaces
+export interface DexscreenerToken {
+  address: string;
+  name: string;
+  symbol: string;
+}
+
+export interface DexscreenerPair {
+  chainId: string;
+  dexId: string;
+  url: string;
+  pairAddress: string;
+  baseToken: DexscreenerToken;
+  quoteToken: DexscreenerToken;
+  priceUsd: string;
+  liquidity: {
+    usd: number;
+    base: number;
+    quote: number;
+  };
+  fdv: number;
+  marketCap: number;
+  info?: {
+    imageUrl?: string;
+  };
+}
+
 // Security thresholds and checks
 const DUST_THRESHOLD = 0.001; // SOL
 const SUSPICIOUS_PATTERNS = [
@@ -221,12 +248,28 @@ export const getBalance = async (): Promise<number> => {
 export const getSolanaPrice = async (): Promise<number> => {
   try {
     const response = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"
+      "https://api.dexscreener.com/latest/dex/tokens/So11111111111111111111111111111111111111112",
+      {
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
     );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch SOL price');
+    }
+
     const data = await response.json();
-    return data.solana.usd;
+    
+    // Return the price from the first pair if it exists
+    if (data.pairs && data.pairs.length > 0) {
+      return parseFloat(data.pairs[0].priceUsd);
+    }
+
+    throw new Error('No price data available');
   } catch (error) {
-    console.error("Failed to fetch Solana price:", error);
+    console.error("Failed to fetch SOL price:", error);
     throw error;
   }
 };
@@ -239,7 +282,7 @@ export const getRecentTransactions = async (address: string): Promise<Transactio
     try {
       const signatures = await connection.getSignaturesForAddress(
         new PublicKey(address),
-        { limit: 5 }
+        { limit: 7 }
       );
 
       const transactions: TransactionInfo[] = [];
@@ -460,18 +503,26 @@ export const sendTransaction = async (recipientAddress: string, amount: number) 
       maxRetries: 3
     });
 
-    // Confirm with proper options
-    const confirmation = await connection.confirmTransaction({
-      signature,
-      blockhash,
-      lastValidBlockHeight: (await connection.getLatestBlockhash()).lastValidBlockHeight
-    }, 'confirmed');
-
-    if (confirmation.value.err) {
-      throw new Error(`Transaction failed: ${confirmation.value.err}`);
+    // Use polling instead of WebSocket for confirmation
+    const TIMEOUT = 60000; // 60 seconds
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < TIMEOUT) {
+      const status = await connection.getSignatureStatus(signature);
+      
+      if (status?.value?.confirmationStatus === 'confirmed' || 
+          status?.value?.confirmationStatus === 'finalized') {
+        if (status.value.err) {
+          throw new Error(`Transaction failed: ${status.value.err}`);
+        }
+        return signature;
+      }
+      
+      // Wait 1 second before next poll
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    return signature;
+    throw new Error('Transaction confirmation timeout');
   } catch (error: any) {
     console.error("Transaction error:", error);
     throw new Error(error.message || "Transaction failed");
@@ -530,6 +581,62 @@ export const getTokenBalances = async (): Promise<TokenBalance[]> => {
   } catch (error) {
     console.error("Failed to fetch token balances:", error);
     throw error;
+  }
+};
+
+// Add this new function before the getBalance function
+export const getTokenPrice = async (chainId: string, tokenAddress: string): Promise<DexscreenerPair | null> => {
+  try {
+    const response = await fetch(
+      `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`,
+      {
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch token price');
+    }
+
+    const data = await response.json();
+    
+    // Return the first pair if it exists
+    if (data.pairs && data.pairs.length > 0) {
+      return data.pairs[0];
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Failed to fetch token price:', error);
+    return null;
+  }
+};
+
+// Add this function to get specific token balance
+export const getTokenBalance = async (tokenAddress: string): Promise<number | null> => {
+  const provider = getProvider();
+  if (!provider?.publicKey) {
+    throw new Error("Wallet not connected.");
+  }
+
+  try {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      provider.publicKey,
+      { mint: new PublicKey(tokenAddress) },
+      'confirmed'
+    );
+
+    // If user has no account for this token, return 0
+    if (tokenAccounts.value.length === 0) return 0;
+
+    // Get the token amount from the first account
+    const tokenAmount = tokenAccounts.value[0].account.data.parsed.info.tokenAmount;
+    return tokenAmount.uiAmount || 0;
+  } catch (error) {
+    console.error("Failed to fetch token balance:", error);
+    return null;
   }
 };
 

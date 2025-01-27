@@ -1,11 +1,12 @@
 "use client";
 
+import React from "react";
 import { useState, useEffect } from "react";
 import { HiWifi, HiPaperAirplane, HiRefresh, HiArrowRight, HiArrowDown } from "react-icons/hi";
 import { HiClipboard, HiClipboardCheck, HiExternalLink, HiClock } from "react-icons/hi";
 import { HiArrowPath } from "react-icons/hi2";
 import { toast, Toaster } from "react-hot-toast";
-import { connectWallet, disconnectWallet, getBalance, getSolanaPrice, getRecentTransactions, getTokenBalances, type TokenBalance } from "../utils/phantom";
+import { connectWallet, disconnectWallet, getBalance, getSolanaPrice, getRecentTransactions, getTokenPrice, getTokenBalance, DexscreenerPair } from "../utils/phantom";
 import SendTransactionModal from "./SendTransactionModal";
 import ReceiveModal from "./ReceiveModal";
 import TransactionList from "./TransactionList";
@@ -28,7 +29,6 @@ interface Transaction {
 const PhantomWallet = () => {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
-  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
   const [solPrice, setSolPrice] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -37,6 +37,9 @@ const PhantomWallet = () => {
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const [isTransactionsLoading, setIsTransactionsLoading] = useState(false);
+  const [tokenInfo, setTokenInfo] = useState<DexscreenerPair | null>(null);
+  const [tokenBalance, setTokenBalance] = useState<number | null>(null);
+  const TOKEN_ADDRESS = "14CAzpfByGNyfR6fhiNJbLCkH5sReh49aChaxqGSmoon";
 
   // Fetch SOL price periodically
   useEffect(() => {
@@ -58,7 +61,6 @@ const PhantomWallet = () => {
   useEffect(() => {
     if (walletAddress) {
       fetchBalance();
-      fetchTokenBalances();
     }
   }, [walletAddress]);
 
@@ -80,6 +82,31 @@ const PhantomWallet = () => {
 
     fetchTransactions();
   }, [walletAddress]);
+
+  useEffect(() => {
+    const fetchTokenInfo = async () => {
+      const chainId = "solana";
+      const info = await getTokenPrice(chainId, TOKEN_ADDRESS);
+      setTokenInfo(info);
+      fetchTokenBalance();
+    };
+
+    fetchTokenInfo();
+    const interval = setInterval(fetchTokenInfo, 30000);
+    return () => clearInterval(interval);
+  }, [walletAddress]);
+
+  const fetchTokenBalance = async () => {
+    if (walletAddress) {
+      try {
+        const balance = await getTokenBalance(TOKEN_ADDRESS);
+        setTokenBalance(balance);
+      } catch (error) {
+        console.error("Failed to fetch token balance:", error);
+        setTokenBalance(null);
+      }
+    }
+  };
 
   const handleConnect = async () => {
     try {
@@ -107,24 +134,17 @@ const PhantomWallet = () => {
     if (walletAddress) {
       setIsBalanceLoading(true);
       try {
-        const bal = await getBalance();
-        setBalance(bal);
-        toast.success("Balance updated!");
+        const [solBalance, tokenBal] = await Promise.all([
+          getBalance(),
+          getTokenBalance(TOKEN_ADDRESS)
+        ]);
+        setBalance(solBalance);
+        setTokenBalance(tokenBal);
+        toast.success("Balances updated!");
       } catch (error: any) {
-        toast.error(error.message || "Failed to fetch balance");
+        toast.error(error.message || "Failed to fetch balances");
       } finally {
         setIsBalanceLoading(false);
-      }
-    }
-  };
-
-  const fetchTokenBalances = async () => {
-    if (walletAddress) {
-      try {
-        const balances = await getTokenBalances();
-        setTokenBalances(balances);
-      } catch (error: any) {
-        console.error("Failed to fetch token balances:", error);
       }
     }
   };
@@ -182,6 +202,41 @@ const PhantomWallet = () => {
 
   const shortenSignature = (signature: string) => {
     return `${signature.slice(0, 4)}...${signature.slice(-4)}`;
+  };
+
+  // Add this function after the other formatting functions
+  const formatTokenPrice = (priceStr: string): React.ReactNode => {
+    const price = parseFloat(priceStr || "0");
+    
+    // If price is 0 or not a valid number, return "0"
+    if (!price || isNaN(price)) return "$0";
+    
+    // If price is greater than 0.0001, use regular formatting
+    if (price >= 0.0001) {
+      return `$${price.toFixed(4)}`;
+    }
+    
+    // For very small numbers, use sub notation
+    const priceString = price.toFixed(10);
+    const [whole, decimal] = priceString.split('.');
+    
+    // Count leading zeros in decimal
+    let leadingZeros = 0;
+    for (const char of decimal) {
+      if (char === '0') {
+        leadingZeros++;
+      } else {
+        break;
+      }
+    }
+    
+    // Format with subscript notation
+    const significantDigits = decimal.slice(leadingZeros, leadingZeros + 4);
+    return (
+      <span className="whitespace-nowrap">
+        $0.0<sub className="text-xs">{leadingZeros}</sub>{significantDigits}
+      </span>
+    );
   };
 
   return (
@@ -271,55 +326,96 @@ const PhantomWallet = () => {
                 </div>
                 
                 <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-white/90 text-lg font-medium">Balance</h2>
+                    <button
+                      onClick={fetchBalance}
+                      disabled={isBalanceLoading}
+                      className="group p-2 hover:bg-white/5 rounded-lg transition-colors duration-200"
+                    >
+                      <HiRefresh className={`w-4 h-4 text-white/60 ${isBalanceLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                  
                   {/* SOL Balance */}
-                  <div className="bg-accent rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-white/60 text-sm">SOL Balance</p>
-                      <button
-                        onClick={() => {
-                          fetchBalance();
-                          fetchTokenBalances();
-                        }}
-                        className="text-white/60 hover:text-white/90 transition-colors p-1"
-                        title="Refresh Balances"
-                        disabled={isBalanceLoading}
-                      >
-                        <HiRefresh className={`w-4 h-4 ${isBalanceLoading ? 'animate-spin' : ''}`} />
-                      </button>
-                    </div>
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-white/90 font-mono text-lg">
-                        {balance !== null ? `${balance.toFixed(4)} SOL` : "Loading..."}
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src="/solana-logo.svg"
+                          alt="Solana"
+                          width={24}
+                          height={24}
+                          className="rounded-full"
+                        />
+                        <p className="text-xl font-medium text-white">
+                          SOL
+                        </p>
+                      </div>
+                      <p className="text-white/90 font-mono">
+                        {solPrice ? `$${solPrice.toFixed(2)}` : "Loading..."} USD
                       </p>
-                      {balance !== null && solPrice !== null && (
-                        <p className="text-white/60 font-mono text-sm">
-                          {formatUSD(balance * solPrice)}
+                    </div>
+                    <div className="space-y-0.5">
+                      {/* SOL Balance */}
+                      <p className="text-2xl font-medium text-white">
+                        {balance !== null ? balance.toLocaleString() : "Loading..."} SOL
+                      </p>
+                      {/* SOL Value in USD */}
+                      {balance !== null && solPrice && (
+                        <p className="text-white/60 text-sm">
+                          ≈ ${(balance * solPrice).toFixed(2)} USD
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {/* Token Balances */}
-                  {tokenBalances.length > 0 && (
-                    <div className="bg-accent/50 rounded-lg divide-y divide-white/5">
-                      {tokenBalances.map((token) => (
-                        <div key={token.mint} className="p-4 first:rounded-t-lg last:rounded-b-lg">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {token.logoURI && (
-                                <img
-                                  src={token.logoURI}
-                                  alt={token.symbol}
-                                  className="w-5 h-5 rounded-full"
-                                />
-                              )}
-                              <p className="text-white/90 font-mono">
-                                {token.balance.toFixed(4)} {token.symbol}
-                              </p>
-                            </div>
-                          </div>
+                  {/* Token Info */}
+                  {tokenInfo && (
+                    <div className="pt-4 border-t border-white/10 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {tokenInfo.info?.imageUrl && (
+                            <Image
+                              src={tokenInfo.info.imageUrl}
+                              alt={tokenInfo.baseToken.symbol}
+                              width={24}
+                              height={24}
+                              className="rounded-full"
+                            />
+                          )}
+                          <p className="text-xl font-medium text-white">
+                            {tokenInfo.baseToken.symbol}
+                          </p>
                         </div>
-                      ))}
+                        <p className="text-white/90 font-mono flex items-baseline">
+                          {formatTokenPrice(tokenInfo.priceUsd)}
+                        </p>
+                      </div>
+                      <div className="space-y-0.5">
+                        {/* Token Balance */}
+                        {tokenBalance !== null && (
+                          <p className="text-2xl font-medium text-white">
+                            {tokenBalance.toLocaleString()} {tokenInfo.baseToken.symbol}
+                          </p>
+                        )}
+                        {/* Token Value in USD */}
+                        {tokenBalance !== null && tokenInfo.priceUsd && (
+                          <p className="text-white/60 text-sm">
+                            ≈ ${(tokenBalance * parseFloat(tokenInfo.priceUsd)).toFixed(2)} USD
+                          </p>
+                        )}
+                        {tokenInfo.marketCap && (
+                          <p className="text-white/60 text-sm">
+                            Market Cap: ${tokenInfo.marketCap.toLocaleString()}
+                          </p>
+                        )}
+                        {tokenInfo.liquidity?.usd && (
+                          <p className="text-white/60 text-sm">
+                            24h Volume: ${tokenInfo.liquidity.usd.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
