@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Fred",
   description: "A simple Solana wallet interface",
+  
 };
 
 // Disable error overlay in development

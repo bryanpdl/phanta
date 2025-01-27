@@ -1,22 +1,32 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { HiX, HiArrowRight } from "react-icons/hi";
+import { HiX, HiArrowRight, HiSwitchHorizontal } from "react-icons/hi";
 import { toast } from "react-hot-toast";
 import { sendTransaction, getBalance } from "../utils/phantom";
+import { sendFredTokens } from "../utils/phantomFred";
+import Image from "next/image";
 
 interface SendTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   senderAddress: string;
+  tokenInfo?: {
+    symbol: string;
+    balance: number | null;
+    imageUrl?: string;
+    priceUsd?: string;
+  };
+  solPrice?: number;
 }
 
-const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactionModalProps) => {
+const SendTransactionModal = ({ isOpen, onClose, senderAddress, tokenInfo, solPrice }: SendTransactionModalProps) => {
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
   const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
+  const [isSendingToken, setIsSendingToken] = useState(false);
 
   // Fetch initial balance
   useEffect(() => {
@@ -41,17 +51,37 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactio
     }
     
     const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || !currentBalance) {
+    if (isNaN(parsedAmount)) {
       setHasInsufficientBalance(false);
       return;
     }
 
-    // Calculate total needed including maximum service fee (0.3% or minimum)
-    const serviceFee = Math.max(parsedAmount * 0.003, 0.001 + 0.0003);
-    const totalNeeded = parsedAmount + serviceFee;
+    if (isSendingToken && tokenInfo) {
+      // First check if we have enough tokens
+      if (tokenInfo.balance !== null && parsedAmount > tokenInfo.balance) {
+        setHasInsufficientBalance(true);
+        return;
+      }
 
-    setHasInsufficientBalance(totalNeeded > currentBalance);
-  }, [amount, currentBalance]);
+      // Then calculate and check if we have enough SOL for the fee
+      const tokenPriceUsd = parseFloat(tokenInfo.priceUsd || "0");
+      const amountInUsd = parsedAmount * tokenPriceUsd;
+      const solPriceUsd = solPrice || 0;
+      
+      // Calculate fee in SOL based on USD value
+      const serviceFeeInSol = Math.max(
+        (amountInUsd / solPriceUsd) * 0.003, // 0.3% of USD value in SOL
+        0.001 + 0.0003 // Minimum fee in SOL
+      );
+
+      setHasInsufficientBalance(currentBalance !== null && serviceFeeInSol > currentBalance);
+    } else {
+      // For SOL transfers, check total amount needed including fee
+      const serviceFee = Math.max(parsedAmount * 0.003, 0.001 + 0.0003);
+      const totalNeeded = parsedAmount + serviceFee;
+      setHasInsufficientBalance(currentBalance !== null && totalNeeded > currentBalance);
+    }
+  }, [amount, currentBalance, isSendingToken, tokenInfo, solPrice]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,8 +93,20 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactio
         throw new Error("Please enter a valid amount");
       }
 
-      await sendTransaction(recipient, parsedAmount);
-      toast.success("Transaction sent successfully!");
+      if (isSendingToken && tokenInfo) {
+        const tokenPriceUsd = parseFloat(tokenInfo.priceUsd || "0");
+        await sendFredTokens(
+          recipient, 
+          parsedAmount,
+          tokenPriceUsd,
+          solPrice || 0
+        );
+        toast.success(`${tokenInfo.symbol} sent successfully!`);
+      } else {
+        await sendTransaction(recipient, parsedAmount);
+        toast.success("SOL sent successfully!");
+      }
+      
       onClose();
       setRecipient("");
       setAmount("");
@@ -87,7 +129,59 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactio
           <HiX className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl font-bold text-white/90 mb-6">Send SOL</h2>
+        <h2 className="text-xl font-bold text-white/90 mb-4">Send Transaction</h2>
+
+        {/* Token Selection */}
+        {tokenInfo && (
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setIsSendingToken(false)}
+              className={`flex-1 flex font-medium items-center justify-center gap-2 p-3 rounded-lg transition-all ${
+                !isSendingToken 
+                  ? 'bg-secondary shadow-[inset_0_1px_1px_var(--secondary-shadow-top),_inset_0_-4px_0_var(--secondary-shadow)]' 
+                  : 'bg-accent/30 opacity-60 hover:opacity-80'
+              }`}
+            >
+              <Image
+                src="/solana-logo.svg"
+                alt="SOL"
+                width={20}
+                height={20}
+                className="rounded-full"
+              />
+              <span className="text-white/90">SOL</span>
+              {currentBalance !== null && (
+                <span className="text-white/60 text-sm ml-1">
+                  ({currentBalance.toLocaleString()})
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setIsSendingToken(true)}
+              className={`flex-1 flex font-medium items-center justify-center gap-2 p-3 rounded-lg transition-all ${
+                isSendingToken 
+                  ? 'bg-secondary shadow-[inset_0_1px_1px_var(--secondary-shadow-top),_inset_0_-4px_0_var(--secondary-shadow)]' 
+                  : 'bg-accent/30 opacity-60 hover:opacity-80'
+              }`}
+            >
+              {tokenInfo.imageUrl && (
+                <Image
+                  src={tokenInfo.imageUrl}
+                  alt={tokenInfo.symbol}
+                  width={20}
+                  height={20}
+                  className="rounded-full"
+                />
+              )}
+              <span className="text-white/90">{tokenInfo.symbol}</span>
+              {tokenInfo.balance !== null && (
+                <span className="text-white/60 text-sm ml-1">
+                  ({tokenInfo.balance.toLocaleString()})
+                </span>
+              )}
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -114,7 +208,7 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactio
 
           <div>
             <label htmlFor="amount" className="block text-white/60 text-sm mb-1">
-              Amount (SOL)
+              Amount ({isSendingToken ? tokenInfo?.symbol || 'Token' : 'SOL'})
             </label>
             <div className="relative">
               <input
@@ -132,15 +226,31 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactio
               />
               {hasInsufficientBalance && (
                 <p className="absolute -bottom-6 left-0 text-red-500 text-xs">
-                  Insufficient balance (including service fee)
+                  {isSendingToken && tokenInfo
+                    ? (tokenInfo.balance !== null && parseFloat(amount) > tokenInfo.balance)
+                      ? `Insufficient ${tokenInfo.symbol} balance`
+                      : "Insufficient SOL balance for service fee"
+                    : "Insufficient balance (including service fee)"}
                 </p>
               )}
             </div>
             {amount && (
               <div className={`space-y-1 ${hasInsufficientBalance ? 'mt-8' : 'mt-4'}`}>
                 <p className="text-white/60 text-xs">
-                  Service fee: {Math.max(parseFloat(amount) * 0.003, 0.001 + 0.0003).toFixed(6)} SOL
-                  {parseFloat(amount) * 0.003 < (0.001 + 0.0003) && " (minimum fee)"}
+                  {isSendingToken && tokenInfo ? (
+                    <>
+                      Service fee: {Math.max(
+                        (parseFloat(amount) * parseFloat(tokenInfo.priceUsd || "0") / (solPrice || 1)) * 0.003,
+                        0.001 + 0.0003
+                      ).toFixed(6)} SOL
+                      {(parseFloat(amount) * parseFloat(tokenInfo.priceUsd || "0") / (solPrice || 1)) * 0.003 < (0.001 + 0.0003) && " (minimum fee)"}
+                    </>
+                  ) : (
+                    <>
+                      Service fee: {Math.max(parseFloat(amount) * 0.003, 0.001 + 0.0003).toFixed(6)} SOL
+                      {parseFloat(amount) * 0.003 < (0.001 + 0.0003) && " (minimum fee)"}
+                    </>
+                  )}
                 </p>
                 <p className="text-white/40 text-xs">
                   Minimum transaction amount: 0.0023 SOL
@@ -158,7 +268,7 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress }: SendTransactio
               "Sending..."
             ) : (
               <>
-                Send Transaction
+                Send {isSendingToken ? tokenInfo?.symbol || 'Token' : 'SOL'}
                 <HiArrowRight className="w-5 h-5" />
               </>
             )}

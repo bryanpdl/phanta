@@ -16,8 +16,11 @@
     --accent-shadow: #252625;
     --accent-shadow-top: rgba(255, 255, 255, 0.03);
     --primary: #2760ff;
+    --secondary: #fba316;
     --primary-shadow: #204cc6;
+    --secondary-shadow: #c67a1d;
     --primary-shadow-top: rgba(255, 255, 255, 0.55);
+    --secondary-shadow-top: rgba(255, 255, 255, 0.55);
     --container-shadow: #161716;
     --container-shadow-top: rgba(255, 255, 255, 0.094);
   }
