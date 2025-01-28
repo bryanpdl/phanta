@@ -4,14 +4,16 @@ import React from "react";
 import { useState, useEffect } from "react";
 import { HiWifi, HiPaperAirplane, HiRefresh, HiArrowRight, HiArrowDown, HiClock, HiArrowLeft } from "react-icons/hi";
 import { HiClipboard, HiClipboardCheck, HiExternalLink } from "react-icons/hi";
-import { HiArrowPath } from "react-icons/hi2";
+import { HiArrowPath, HiArrowsUpDown } from "react-icons/hi2";
 import { toast, Toaster } from "react-hot-toast";
 import { connectWallet, disconnectWallet, getBalance, getSolanaPrice, getRecentTransactions, getTokenPrice, getTokenBalance, DexscreenerPair } from "../utils/phantom";
 import SendTransactionModal from "./SendTransactionModal";
 import ReceiveModal from "./ReceiveModal";
+import SwapModal from "./SwapModal";
 import TransactionList from "./TransactionList";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { TOKEN_ADDRESS } from "../utils/constants";
 
 interface Transaction {
   signature: string;
@@ -40,8 +42,8 @@ const PhantomWallet = () => {
   const [isTransactionsLoading, setIsTransactionsLoading] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<DexscreenerPair | null>(null);
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
-  const TOKEN_ADDRESS = "14CAzpfByGNyfR6fhiNJbLCkH5sReh49aChaxqGSmoon";
   const [showTransactions, setShowTransactions] = useState(false);
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
 
   // Fetch SOL price periodically
   useEffect(() => {
@@ -173,7 +175,7 @@ const PhantomWallet = () => {
         setCopied(true);
         toast.success("Address copied to clipboard!");
         setTimeout(() => setCopied(false), 2000);
-      } catch (error) {
+    } catch (error) {
         toast.error("Failed to copy address");
       }
     }
@@ -298,6 +300,17 @@ const PhantomWallet = () => {
                   walletAddress={walletAddress}
                 />
               )}
+              {walletAddress && tokenInfo && (
+                <SwapModal
+                  isOpen={isSwapModalOpen}
+                  onClose={() => setIsSwapModalOpen(false)}
+                  walletAddress={walletAddress}
+                  solBalance={balance || 0}
+                  solPrice={solPrice || 0}
+                  tokenInfo={tokenInfo}
+                  tokenBalance={tokenBalance || 0}
+                />
+              )}
               
               <div className="w-[400px] container-neumorphic rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -325,8 +338,8 @@ const PhantomWallet = () => {
                 </div>
 
                 <div className="space-y-6">
-                  {walletAddress ? (
-                    <>
+      {walletAddress ? (
+        <>
                       <div className="bg-accent rounded-lg p-4">
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-white/60 text-sm">Wallet Address</p>
@@ -386,11 +399,9 @@ const PhantomWallet = () => {
                             </p>
                           </div>
                           <div className="space-y-0.5">
-                            {/* SOL Balance */}
                             <p className="text-2xl font-medium text-white">
                               {balance !== null ? balance.toLocaleString() : "Loading..."} SOL
                             </p>
-                            {/* SOL Value in USD */}
                             {balance !== null && solPrice && (
                               <p className="text-white/60 text-sm">
                                 ≈ ${(balance * solPrice).toFixed(2)} USD
@@ -401,49 +412,58 @@ const PhantomWallet = () => {
 
                         {/* Token Info */}
                         {tokenInfo && (
-                          <div className="pt-4 border-t border-white/10 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                {tokenInfo.info?.imageUrl && (
-                                  <Image
-                                    src={tokenInfo.info.imageUrl}
-                                    alt={tokenInfo.baseToken.symbol}
-                                    width={24}
-                                    height={24}
-                                    className="rounded-full"
-                                  />
-                                )}
-                                <p className="text-xl font-medium text-white">
-                                  {tokenInfo.baseToken.symbol}
+                          <div className="relative pt-4 border-t border-white/10">
+                            <button
+                              onClick={() => setIsSwapModalOpen(true)}
+                              className="absolute -top-4 left-1/2 -translate-x-1/2 bg-background p-2 rounded-lg transition-all hover:brightness-110 shadow-[inset_0_1px_1px_var(--container-shadow-top),inset_0_-4px_0_var(--container-shadow)] hover:shadow-[inset_0_1px_1px_var(--container-shadow-top),inset_0_-6px_0_var(--container-shadow)] active:shadow-[inset_0_1px_1px_var(--container-shadow-top),inset_0_-1px_0_var(--container-shadow)] active:translate-y-[3px]"
+                              title="Swap Tokens"
+                            >
+                              <HiArrowsUpDown className="w-5 h-5 text-white" />
+                            </button>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {tokenInfo.info?.imageUrl && (
+                                    <Image
+                                      src={tokenInfo.info.imageUrl}
+                                      alt={tokenInfo.baseToken.symbol}
+                                      width={24}
+                                      height={24}
+                                      className="rounded-full"
+                                    />
+                                  )}
+                                  <p className="text-xl font-medium text-white">
+                                    {tokenInfo.baseToken.symbol}
+                                  </p>
+                                </div>
+                                <p className="text-white/90 font-mono flex items-baseline">
+                                  {formatTokenPrice(tokenInfo.priceUsd)}
                                 </p>
                               </div>
-                              <p className="text-white/90 font-mono flex items-baseline">
-                                {formatTokenPrice(tokenInfo.priceUsd)}
-                              </p>
-                            </div>
-                            <div className="space-y-0.5">
-                              {/* Token Balance */}
-                              {tokenBalance !== null && (
-                                <p className="text-2xl font-medium text-white">
-                                  {tokenBalance.toLocaleString()} {tokenInfo.baseToken.symbol}
-                                </p>
-                              )}
-                              {/* Token Value in USD */}
-                              {tokenBalance !== null && tokenInfo.priceUsd && (
-                                <p className="text-white/60 text-sm">
-                                  ≈ ${(tokenBalance * parseFloat(tokenInfo.priceUsd)).toFixed(2)} USD
-                                </p>
-                              )}
-                              {tokenInfo.marketCap && (
-                                <p className="text-white/60 text-sm">
-                                  Market Cap: ${tokenInfo.marketCap.toLocaleString()}
-                                </p>
-                              )}
-                              {tokenInfo.liquidity?.usd && (
-                                <p className="text-white/60 text-sm">
-                                  24h Volume: ${tokenInfo.liquidity.usd.toLocaleString()}
-                                </p>
-                              )}
+                              <div className="space-y-0.5">
+                                {/* Token Balance */}
+                                {tokenBalance !== null && (
+                                  <p className="text-2xl font-medium text-white">
+                                    {tokenBalance.toLocaleString()} {tokenInfo.baseToken.symbol}
+                                  </p>
+                                )}
+                                {/* Token Value in USD */}
+                                {tokenBalance !== null && tokenInfo.priceUsd && (
+                                  <p className="text-white/60 text-sm">
+                                    ≈ ${(tokenBalance * parseFloat(tokenInfo.priceUsd)).toFixed(2)} USD
+                                  </p>
+                                )}
+                                {tokenInfo.marketCap && (
+                                  <p className="text-white/60 text-sm">
+                                    Market Cap: ${tokenInfo.marketCap.toLocaleString()}
+                                  </p>
+                                )}
+                                {tokenInfo.liquidity?.usd && (
+                                  <p className="text-white/60 text-sm">
+                                    24h Volume: ${tokenInfo.liquidity.usd.toLocaleString()}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         )}
@@ -473,8 +493,8 @@ const PhantomWallet = () => {
                       >
                         Disconnect Wallet
                       </button>
-                    </>
-                  ) : (
+        </>
+      ) : (
                     <button
                       onClick={handleConnect}
                       className="w-full btn-primary text-white/90 font-medium py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"

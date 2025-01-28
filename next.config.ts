@@ -6,11 +6,12 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   webpack: (config, { dev, isServer }) => {
-    if (dev && !isServer) {
+    if (dev) {
+      // Optimize fast refresh
       config.watchOptions = {
-        ...config.watchOptions,
-        poll: 1000, // Check for changes every second
-        aggregateTimeout: 300, // Delay before rebuilding
+        aggregateTimeout: 200,
+        poll: false, // Use native filesystem watching
+        ignored: ['**/node_modules', '**/.git', '**/.next'],
       };
     }
     return config;
@@ -18,3 +19,6 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+
+

@@ -7,6 +7,11 @@ const nextConfig = {
         hostname: 'cdn.dexscreener.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'dd.dexscreener.com',
+        pathname: '/ds-data/tokens/**',
+      },
     ],
   },
   eslint: {

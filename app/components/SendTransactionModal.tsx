@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { HiX, HiArrowRight, HiSwitchHorizontal } from "react-icons/hi";
+import { HiX, HiArrowRight, HiSwitchHorizontal, HiInformationCircle } from "react-icons/hi";
 import { toast } from "react-hot-toast";
 import { sendTransaction, getBalance } from "../utils/phantom";
 import { sendFredTokens } from "../utils/phantomFred";
@@ -138,7 +138,7 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress, tokenInfo, solPr
               onClick={() => setIsSendingToken(false)}
               className={`flex-1 flex font-medium items-center justify-center gap-2 p-3 rounded-lg transition-all ${
                 !isSendingToken 
-                  ? 'bg-secondary shadow-[inset_0_1px_1px_var(--secondary-shadow-top),_inset_0_-4px_0_var(--secondary-shadow)]' 
+                  ? 'bg-background shadow-[inset_0_1px_1px_var(--container-shadow-top),_inset_0_-4px_0_var(--container-shadow)]' 
                   : 'bg-accent/30 opacity-60 hover:opacity-80'
               }`}
             >
@@ -160,7 +160,7 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress, tokenInfo, solPr
               onClick={() => setIsSendingToken(true)}
               className={`flex-1 flex font-medium items-center justify-center gap-2 p-3 rounded-lg transition-all ${
                 isSendingToken 
-                  ? 'bg-secondary shadow-[inset_0_1px_1px_var(--secondary-shadow-top),_inset_0_-4px_0_var(--secondary-shadow)]' 
+                  ? 'bg-background shadow-[inset_0_1px_1px_var(--container-shadow-top),_inset_0_-4px_0_var(--container-shadow)]' 
                   : 'bg-accent/30 opacity-60 hover:opacity-80'
               }`}
             >
@@ -235,42 +235,61 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress, tokenInfo, solPr
               )}
             </div>
             {amount && (
-              <div className={`space-y-1 ${hasInsufficientBalance ? 'mt-8' : 'mt-4'}`}>
-                <p className="text-white/60 text-xs">
-                  {isSendingToken && tokenInfo ? (
-                    <>
-                      Service fee: {Math.max(
+              <div className={`space-y-2 ${hasInsufficientBalance ? 'mt-8' : 'mt-4'}`}>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-1 text-white/60">
+                    <span>Service Fee</span>
+                    <HiInformationCircle className="w-4 h-4" />
+                  </div>
+                  <p className="text-white/90">
+                    {isSendingToken && tokenInfo ? (
+                      `${Math.max(
                         (parseFloat(amount) * parseFloat(tokenInfo.priceUsd || "0") / (solPrice || 1)) * 0.003,
                         0.001 + 0.0003
-                      ).toFixed(6)} SOL
-                      {(parseFloat(amount) * parseFloat(tokenInfo.priceUsd || "0") / (solPrice || 1)) * 0.003 < (0.001 + 0.0003) && " (minimum fee)"}
-                    </>
-                  ) : (
-                    <>
-                      Service fee: {Math.max(parseFloat(amount) * 0.003, 0.001 + 0.0003).toFixed(6)} SOL
-                      {parseFloat(amount) * 0.003 < (0.001 + 0.0003) && " (minimum fee)"}
-                    </>
-                  )}
-                </p>
-                <p className="text-white/40 text-xs">
-                  Minimum transaction amount: 0.0023 SOL
-                </p>
+                      ).toFixed(6)} SOL`
+                    ) : (
+                      `${Math.max(parseFloat(amount) * 0.003, 0.001 + 0.0003).toFixed(6)} SOL`
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-1 text-white/60">
+                    <span>Fee Structure</span>
+                    <HiInformationCircle className="w-4 h-4" />
+                  </div>
+                  <p className="text-white/60 text-xs">
+                    0.3% fee • Min ${((0.00115 * (solPrice || 0))).toFixed(3)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-1 text-white/60">
+                    <span>USD Value</span>
+                    <HiInformationCircle className="w-4 h-4" />
+                  </div>
+                  <p className="text-white/90">
+                    {isSendingToken && tokenInfo ? (
+                      `$${(parseFloat(amount || "0") * parseFloat(tokenInfo.priceUsd || "0")).toFixed(2)}`
+                    ) : (
+                      `$${(parseFloat(amount || "0") * (solPrice || 0)).toFixed(2)}`
+                    )}
+                  </p>
+                </div>
               </div>
             )}
           </div>
 
           <button
             type="submit"
-            disabled={isLoading || hasInsufficientBalance}
-            className="w-full btn-primary text-white/90 font-medium py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading || hasInsufficientBalance || !amount || !recipient}
+            className="w-full btn-primary text-white/90 font-medium py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
           >
             {isLoading ? (
-              "Sending..."
-            ) : (
               <>
-                Send {isSendingToken ? tokenInfo?.symbol || 'Token' : 'SOL'}
-                <HiArrowRight className="w-5 h-5" />
+                <div className="w-5 h-5 border-2 border-white/20 border-t-white/90 rounded-full animate-spin" />
+                Sending...
               </>
+            ) : (
+              "Send"
             )}
           </button>
         </form>

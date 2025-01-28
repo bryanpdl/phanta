@@ -13,6 +13,7 @@ import {
   createAssociatedTokenAccountInstruction,
   getAccount
 } from "@solana/spl-token";
+import { TOKEN_PUBKEY } from "./constants";
 
 // Add Phantom provider interface
 interface PhantomProvider {
@@ -43,9 +44,6 @@ const MIN_FEE_SOL = 0.001; // Minimum fee base
 const BASE_FEE_PERCENTAGE = 0.003; // 0.3% fee
 const FEE_RECIPIENT = new PublicKey("Ccjx1HT5x7NLertCeC8pBJFH2PMsNKYU4ayKFGGmGMfS");
 
-// FRED token constants
-export const FRED_TOKEN_ADDRESS = new PublicKey("14CAzpfByGNyfR6fhiNJbLCkH5sReh49aChaxqGSmoon");
-
 // Use the same connection from phantom.ts
 const connection = new Connection(
   `https://solana-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
@@ -63,7 +61,7 @@ export const getOrCreateAssociatedTokenAccount = async (
   recipientPubkey: PublicKey
 ): Promise<PublicKey> => {
   const associatedTokenAddress = await getAssociatedTokenAddress(
-    FRED_TOKEN_ADDRESS,
+    TOKEN_PUBKEY,
     recipientPubkey
   );
 
@@ -106,7 +104,7 @@ export const sendFredTokens = async (
 
     // Get the token accounts
     const sourceTokenAccount = await getAssociatedTokenAddress(
-      FRED_TOKEN_ADDRESS,
+      TOKEN_PUBKEY,
       fromPubkey
     );
     const destinationTokenAccount = await getOrCreateAssociatedTokenAccount(
@@ -127,7 +125,7 @@ export const sendFredTokens = async (
           fromPubkey,
           destinationTokenAccount,
           toPubkey,
-          FRED_TOKEN_ADDRESS
+          TOKEN_PUBKEY
         )
       );
     }
