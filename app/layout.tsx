@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { Onest, Geist_Mono } from "next/font/google";
+import { Onest } from "next/font/google";
 import "./globals.css";
+import Navbar from "./components/Navbar";
+import RoadmapFooter from "./components/RoadmapFooter";
+import { WalletProvider } from "./context/WalletContext";
 
 const onest = Onest({
   variable: "--font-onest",
@@ -8,15 +11,9 @@ const onest = Onest({
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Fred",
-  description: "A simple Solana wallet interface",
-  
+  title: "fred.fun",
+  description: "Simple wallet for FRED/SOL",
 };
 
 // Disable error overlay in development
@@ -32,13 +29,17 @@ if (process.env.NODE_ENV !== 'production') {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body className={`${onest.variable} ${geistMono.variable} font-onest antialiased`}>
-        {children}
+      <body className={`${onest.variable} font-onest antialiased`}>
+        <WalletProvider>
+          <Navbar />
+          {children}
+          <RoadmapFooter />
+        </WalletProvider>
       </body>
     </html>
   );

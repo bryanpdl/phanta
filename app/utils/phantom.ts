@@ -282,7 +282,7 @@ export const getRecentTransactions = async (address: string): Promise<Transactio
     try {
       const signatures = await connection.getSignaturesForAddress(
         new PublicKey(address),
-        { limit: 7 }
+        { limit: 5 }
       );
 
       const transactions: TransactionInfo[] = [];

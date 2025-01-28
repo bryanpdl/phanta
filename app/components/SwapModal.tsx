@@ -18,6 +18,14 @@ interface SwapModalProps {
   tokenBalance: number;
 }
 
+// Tooltip component
+const Tooltip = ({ content }: { content: string }) => (
+  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-background rounded-lg text-xs text-white/90 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+    {content}
+    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-background rotate-45" />
+  </div>
+);
+
 const SwapModal = ({ isOpen, onClose, walletAddress, solBalance, solPrice, tokenInfo, tokenBalance }: SwapModalProps) => {
   const [fromToken, setFromToken] = useState<"SOL" | "TOKEN">("SOL");
   const [amount, setAmount] = useState("");
@@ -229,24 +237,26 @@ const SwapModal = ({ isOpen, onClose, walletAddress, solBalance, solPrice, token
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Image
-                src={getTokenImage(fromToken === "SOL" ? "TOKEN" : "SOL")}
-                alt={getTokenSymbol(fromToken === "SOL" ? "TOKEN" : "SOL")}
-                width={24}
-                height={24}
-                className="rounded-full"
-              />
-              <p className="text-lg font-medium text-white">
-                {getTokenSymbol(fromToken === "SOL" ? "TOKEN" : "SOL")}
-              </p>
-            </div>
-            <div className="flex-1 text-right">
-              <p className="text-lg font-medium text-white">
-                {isLoadingRoute ? "Calculating..." : estimatedAmount.toLocaleString()}
-              </p>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Image
+                  src={getTokenImage(fromToken === "SOL" ? "TOKEN" : "SOL")}
+                  alt={getTokenSymbol(fromToken === "SOL" ? "TOKEN" : "SOL")}
+                  width={24}
+                  height={24}
+                  className="rounded-full"
+                />
+                <p className="text-lg font-medium text-white">
+                  {getTokenSymbol(fromToken === "SOL" ? "TOKEN" : "SOL")}
+                </p>
+              </div>
               <p className="text-white/60 text-sm">
                 ≈ ${(estimatedAmount * getTokenPrice(fromToken === "SOL" ? "TOKEN" : "SOL")).toFixed(2)} USD
+              </p>
+            </div>
+            <div className="flex-1 flex flex-col items-end">
+              <p className="text-lg font-medium text-white">
+                {isLoadingRoute ? "Calculating..." : estimatedAmount.toLocaleString()}
               </p>
             </div>
           </div>
@@ -265,7 +275,10 @@ const SwapModal = ({ isOpen, onClose, walletAddress, solBalance, solPrice, token
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1 text-white/60">
               <span>Price Impact</span>
-              <HiInformationCircle className="w-4 h-4" />
+              <div className="group relative">
+                <HiInformationCircle className="w-4 h-4" />
+                <Tooltip content="The difference between the expected price and the actual price due to market depth and volatility" />
+              </div>
             </div>
             <p className="text-white/90">
               {isLoadingRoute ? "Calculating..." : `${priceImpact.toFixed(2)}%`}
@@ -274,14 +287,20 @@ const SwapModal = ({ isOpen, onClose, walletAddress, solBalance, solPrice, token
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1 text-white/60">
               <span>Route</span>
-              <HiInformationCircle className="w-4 h-4" />
+              <div className="group relative">
+                <HiInformationCircle className="w-4 h-4" />
+                <Tooltip content="The liquidity source and path used to execute your swap for the best price" />
+              </div>
             </div>
             <p className="text-white/90">{bestRoute || "Jupiter"}</p>
           </div>
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1 text-white/60">
               <span>Fees & Slippage</span>
-              <HiInformationCircle className="w-4 h-4" />
+              <div className="group relative">
+                <HiInformationCircle className="w-4 h-4" />
+                <Tooltip content="0.3% service fee for each swap • Maximum slippage tolerance of 3% to protect against price movement" />
+              </div>
             </div>
             <p className="text-white/60 text-xs">
               0.3% fee • Max 3% slippage

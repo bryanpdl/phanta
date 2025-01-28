@@ -11,9 +11,11 @@ import SendTransactionModal from "./SendTransactionModal";
 import ReceiveModal from "./ReceiveModal";
 import SwapModal from "./SwapModal";
 import TransactionList from "./TransactionList";
+import AnimatedBackground from "./AnimatedBackground";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { TOKEN_ADDRESS } from "../utils/constants";
+import { useWallet } from "../context/WalletContext";
 
 interface Transaction {
   signature: string;
@@ -30,6 +32,7 @@ interface Transaction {
 }
 
 const PhantomWallet = () => {
+  const { setWalletConnected } = useWallet();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [solPrice, setSolPrice] = useState<number | null>(null);
@@ -44,6 +47,14 @@ const PhantomWallet = () => {
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [showTransactions, setShowTransactions] = useState(false);
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+
+  // Check wallet connection status on mount
+  useEffect(() => {
+    const address = window.localStorage.getItem("walletAddress");
+    if (address) {
+      setWalletAddress(address);
+    }
+  }, []);
 
   // Fetch SOL price periodically
   useEffect(() => {
@@ -117,6 +128,7 @@ const PhantomWallet = () => {
       const address = await connectWallet();
       setWalletAddress(address);
       setBalance(null); // Reset balance
+      setWalletConnected(true);
       toast.success("Wallet connected successfully!");
     } catch (error: any) {
       toast.error(error.message || "Failed to connect to Phantom Wallet.");
@@ -128,6 +140,7 @@ const PhantomWallet = () => {
       await disconnectWallet();
       setWalletAddress(null);
       setBalance(null);
+      setWalletConnected(false);
       toast.success("Wallet disconnected successfully!");
     } catch (error: any) {
       toast.error(error.message || "Failed to disconnect from Phantom Wallet.");
@@ -245,7 +258,8 @@ const PhantomWallet = () => {
 
   return (
     <div className="min-h-screen bg-background p-8 flex items-center justify-center">
-      <div className="max-w-7xl mx-auto relative">
+      {!walletAddress && <AnimatedBackground />}
+      <div className="max-w-7xl mx-auto relative z-10">
         <AnimatePresence mode="wait">
           {!showTransactions ? (
             <motion.div
@@ -324,7 +338,7 @@ const PhantomWallet = () => {
                         className="object-cover"
                       />
                     </div>
-                    fred.fun
+                    Wallet
                   </h1>
                   {walletAddress && (
                     <button
