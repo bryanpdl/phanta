@@ -176,7 +176,7 @@ const Navbar = () => {
                 </svg>
               </Link>
               <Link
-                href="https://x.com"
+                href="https://x.com/getfredcoin"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -189,7 +189,7 @@ const Navbar = () => {
                 </svg>
               </Link>
               <Link
-                href="https://discord.gg"
+                href="https://discord.gg/vzBRFtcR"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setIsMobileMenuOpen(false)}
