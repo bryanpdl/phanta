@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/react"
 import { Onest } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
@@ -40,6 +41,7 @@ export default function RootLayout({
           {children}
           <RoadmapFooter />
         </WalletProvider>
+        <Analytics />
       </body>
     </html>
   );
