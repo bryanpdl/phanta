@@ -5,9 +5,49 @@ import Navbar from "../components/Navbar";
 import RoadmapFooter from "../components/RoadmapFooter";
 import Image from "next/image";
 import React from "react";
+import { HiExternalLink } from "react-icons/hi";
 
 const TokenomicsPage = () => {
   const { isWalletConnected } = useWallet();
+
+  const walletData = [
+    { 
+      wallet: 'PRIMARY',
+      allocation: '25%',
+      purpose: 'Liquidity pool & market stability',
+      address: '7Scjv8kNPvNiAMbFasE3PUwTEeRBtbLUThNfRwCuMaz9' // Add Solscan address here
+    },
+    { 
+      wallet: 'OPS',
+      allocation: '20%',
+      purpose: 'Operational costs & development',
+      address: 'AxmeWHChaBKhnXcNaRPuBW7g9H2VC6vVZoBfAfQHeotH' // Add Solscan address here
+    },
+    { 
+      wallet: 'TEAM',
+      allocation: '15%',
+      purpose: 'Team rewards with vesting schedule',
+      address: '8F7yrWZZyHejCbtveg6iNj9847tm7sHcdEA58Pa7ZySz' // Add Solscan address here
+    },
+    { 
+      wallet: 'STAKE',
+      allocation: '30%',
+      purpose: 'Staking rewards & incentives',
+      address: '8hdrUdRFcuEz9jR5PwLEjXtTgnAFN3KV6XZpgGrytXET' // Add Solscan address here
+    },
+    { 
+      wallet: 'BURN',
+      allocation: '10%',
+      purpose: 'Permanent removal of tokens from supply',
+      address: '2QePPd8XiSa4beM2L4NkyT7rWDE6Jibc6XLsQjAxdFsk' // Add Solscan address here
+    },
+    { 
+      wallet: 'TOTAL',
+      allocation: '100%',
+      purpose: 'Fully transparent allocation',
+      isTotal: true
+    }
+  ];
 
   return (
     <main className="min-h-screen bg-background text-white relative">
@@ -30,7 +70,7 @@ const TokenomicsPage = () => {
                     className="object-cover"
                   />
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-bold">Fred (FRED) Tokenomics</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold">Fred ($FRED) Tokenomics</h1>
               </div>
               <h2 className="text-xl sm:text-2xl font-semibold mb-4">Overview</h2>
               <p className="text-base sm:text-lg text-gray-300">
@@ -54,54 +94,50 @@ const TokenomicsPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-white/10">
-                        <td className="px-4 py-3">PRIMARY</td>
-                        <td className="px-4 py-3">25%</td>
-                        <td className="px-4 py-3">Liquidity pool & market stability</td>
-                      </tr>
-                      <tr className="border-b border-white/10">
-                        <td className="px-4 py-3">OPS</td>
-                        <td className="px-4 py-3">20%</td>
-                        <td className="px-4 py-3">Operational costs & development</td>
-                      </tr>
-                      <tr className="border-b border-white/10">
-                        <td className="px-4 py-3">TEAM</td>
-                        <td className="px-4 py-3">15%</td>
-                        <td className="px-4 py-3">Team rewards with vesting schedule</td>
-                      </tr>
-                      <tr className="border-b border-white/10">
-                        <td className="px-4 py-3">STAKE</td>
-                        <td className="px-4 py-3">30%</td>
-                        <td className="px-4 py-3">Staking rewards & incentives</td>
-                      </tr>
-                      <tr className="border-b border-white/10">
-                        <td className="px-4 py-3">BURN</td>
-                        <td className="px-4 py-3">10%</td>
-                        <td className="px-4 py-3">Permanent removal of tokens from supply</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-3 font-semibold">TOTAL</td>
-                        <td className="px-4 py-3 font-semibold">100%</td>
-                        <td className="px-4 py-3 font-semibold">Fully transparent allocation</td>
-                      </tr>
+                      {walletData.map((row, index) => (
+                        <tr key={row.wallet} className={index < walletData.length - 1 ? "border-b border-white/10" : ""}>
+                          <td className="px-4 py-3">{row.wallet}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span>{row.allocation}</span>
+                              {!row.isTotal && row.address && (
+                                <a
+                                  href={`https://solscan.io/account/${row.address}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-secondary hover:opacity-80 transition-opacity"
+                                >
+                                  <HiExternalLink className="w-4 h-4" />
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                          <td className={`px-4 py-3 ${row.isTotal ? 'font-semibold' : ''}`}>{row.purpose}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
 
                 {/* Mobile Layout */}
                 <div className="sm:hidden divide-y divide-white/10">
-                  {[
-                    { wallet: 'PRIMARY', allocation: '25%', purpose: 'Liquidity pool & market stability' },
-                    { wallet: 'OPS', allocation: '20%', purpose: 'Operational costs & development' },
-                    { wallet: 'TEAM', allocation: '15%', purpose: 'Team rewards with vesting schedule' },
-                    { wallet: 'STAKE', allocation: '30%', purpose: 'Staking rewards & incentives' },
-                    { wallet: 'BURN', allocation: '10%', purpose: 'Permanent removal of tokens from supply' },
-                    { wallet: 'TOTAL', allocation: '100%', purpose: 'Fully transparent allocation', isTotal: true }
-                  ].map((row, index) => (
+                  {walletData.map((row) => (
                     <div key={row.wallet} className={`p-4 space-y-2 ${row.isTotal ? 'font-semibold' : ''}`}>
                       <div className="flex justify-between items-center">
                         <span>{row.wallet}</span>
-                        <span>{row.allocation}</span>
+                        <div className="flex items-center gap-2">
+                          <span>{row.allocation}</span>
+                          {!row.isTotal && row.address && (
+                            <a
+                              href={`https://solscan.io/account/${row.address}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-secondary hover:opacity-80 transition-opacity"
+                            >
+                              <HiExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
                       </div>
                       <div className="text-gray-300 text-sm">
                         {row.purpose}

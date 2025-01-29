@@ -149,31 +149,63 @@ export const getProvider = (): PhantomProvider | undefined => {
   return undefined;
 };
 
+// Add this new function to check if wallet is already connected
+export const checkWalletConnection = async (): Promise<string | null> => {
+  try {
+    const provider = getProvider();
+    if (!provider) return null;
+
+    // Check if wallet is already connected
+    if (provider.isConnected && provider.publicKey) {
+      return provider.publicKey.toString();
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error checking wallet connection:", error);
+    return null;
+  }
+};
+
 export const connectWallet = async (): Promise<string | null> => {
   try {
-  const provider = getProvider();
+    const provider = getProvider();
     
-  if (!provider) {
+    if (!provider) {
       window.open("https://phantom.app/", "_blank");
       throw new Error("Please install Phantom Wallet to continue.");
     }
 
-    // Request connection - this will throw an error if wallet is locked
+    // Check if already connected first
+    if (provider.isConnected && provider.publicKey) {
+      return provider.publicKey.toString();
+    }
+
+    // Request connection if not already connected
     const resp = await provider.connect();
     
     // Set up disconnect listener
     provider.on("disconnect", () => {
       console.log("Wallet disconnected");
-      window.location.reload(); // Force refresh when wallet is disconnected
+      window.localStorage.removeItem("walletAddress");
+      window.dispatchEvent(new Event('walletDisconnected'));
     });
 
     // Set up account change listener
-    provider.on("accountChanged", () => {
-      console.log("Account changed");
-      window.location.reload(); // Force refresh when account changes
+    provider.on("accountChanged", (publicKey: PublicKey | null) => {
+      console.log("Account changed", publicKey?.toString());
+      if (publicKey) {
+        window.localStorage.setItem("walletAddress", publicKey.toString());
+        window.dispatchEvent(new Event('walletChanged'));
+      } else {
+        window.localStorage.removeItem("walletAddress");
+        window.dispatchEvent(new Event('walletDisconnected'));
+      }
     });
 
-    return resp.publicKey.toString();
+    const address = resp.publicKey.toString();
+    window.localStorage.setItem("walletAddress", address);
+    return address;
     
   } catch (error: any) {
     if (error.code === 4001) {
@@ -193,13 +225,15 @@ export const disconnectWallet = async (): Promise<void> => {
     throw new Error("Phantom Wallet is not installed.");
   }
 
-    try {
+  try {
     provider.removeAllListeners("disconnect");
     provider.removeAllListeners("accountChanged");
-      await provider.disconnect();
-    } catch (error) {
-      console.error("Failed to disconnect from Phantom Wallet:", error);
-      throw error;
+    await provider.disconnect();
+    window.localStorage.removeItem("walletAddress");
+    window.dispatchEvent(new Event('walletDisconnected'));
+  } catch (error) {
+    console.error("Failed to disconnect from Phantom Wallet:", error);
+    throw error;
   }
 };
 

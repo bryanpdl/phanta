@@ -6,7 +6,7 @@ import { HiWifi, HiPaperAirplane, HiRefresh, HiArrowRight, HiArrowDown, HiClock,
 import { HiClipboard, HiClipboardCheck, HiExternalLink } from "react-icons/hi";
 import { HiArrowPath, HiArrowsUpDown } from "react-icons/hi2";
 import { toast, Toaster } from "react-hot-toast";
-import { connectWallet, disconnectWallet, getBalance, getSolanaPrice, getRecentTransactions, getTokenPrice, getTokenBalance, DexscreenerPair } from "../utils/phantom";
+import { connectWallet, disconnectWallet, getBalance, getSolanaPrice, getRecentTransactions, getTokenPrice, getTokenBalance, DexscreenerPair, checkWalletConnection } from "../utils/phantom";
 import SendTransactionModal from "./SendTransactionModal";
 import ReceiveModal from "./ReceiveModal";
 import SwapModal from "./SwapModal";
@@ -48,13 +48,63 @@ const PhantomWallet = () => {
   const [showTransactions, setShowTransactions] = useState(false);
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
 
-  // Check wallet connection status on mount
+  // Check wallet connection status on mount and set up event listeners
   useEffect(() => {
-    const address = window.localStorage.getItem("walletAddress");
-    if (address) {
-      setWalletAddress(address);
-    }
-  }, []);
+    const checkConnection = async () => {
+      try {
+        // First check localStorage
+        const savedAddress = window.localStorage.getItem("walletAddress");
+        
+        if (savedAddress) {
+          // Verify the connection is still valid
+          const isStillConnected = await checkWalletConnection();
+          
+          if (isStillConnected) {
+            setWalletAddress(savedAddress);
+            setWalletConnected(true);
+          } else {
+            // Clean up if the connection is no longer valid
+            window.localStorage.removeItem("walletAddress");
+            setWalletAddress(null);
+            setWalletConnected(false);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking wallet connection:", error);
+      }
+    };
+
+    // Set up event listeners for wallet state changes
+    const handleDisconnect = () => {
+      setWalletAddress(null);
+      setWalletConnected(false);
+      setBalance(null);
+    };
+
+    const handleAccountChange = () => {
+      const newAddress = window.localStorage.getItem("walletAddress");
+      if (newAddress) {
+        setWalletAddress(newAddress);
+        setWalletConnected(true);
+        // Refresh balances when account changes
+        fetchBalance();
+      } else {
+        handleDisconnect();
+      }
+    };
+
+    window.addEventListener('walletDisconnected', handleDisconnect);
+    window.addEventListener('walletChanged', handleAccountChange);
+
+    // Check connection on mount
+    checkConnection();
+
+    // Cleanup event listeners
+    return () => {
+      window.removeEventListener('walletDisconnected', handleDisconnect);
+      window.removeEventListener('walletChanged', handleAccountChange);
+    };
+  }, [setWalletConnected]);
 
   // Fetch SOL price periodically
   useEffect(() => {
