@@ -153,7 +153,7 @@ const Navbar = () => {
 
             <div className="flex justify-center items-center gap-8">
               <Link
-                href="https://dexscreener.com"
+                href="https://dexscreener.com/solana/fiyyt5ri8t16vxy1ceubhs2nmybnzxlvkxwewfq2moon"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setIsMobileMenuOpen(false)}
