@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FaDiscord } from "react-icons/fa";
+import { FaDiscord, FaTelegram } from "react-icons/fa";
 import { useWallet } from "../context/WalletContext";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
@@ -101,6 +101,14 @@ const Navbar = () => {
             </svg>
           </Link>
           <Link
+            href="https://t.me/getfred"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`transition-all duration-300 ${shouldShowConnectedState ? 'text-secondary' : 'text-black'} hover:opacity-80`}
+          >
+            <FaTelegram className="w-7 h-7" />
+          </Link>
+          <Link
             href="https://discord.gg/vzBRFtcR"
             target="_blank"
             rel="noopener noreferrer"
@@ -187,6 +195,15 @@ const Navbar = () => {
                     fill="var(--secondary)"
                   />
                 </svg>
+              </Link>
+              <Link
+                href="https://t.me/getfredcoin"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-secondary hover:opacity-80 transition-opacity"
+              >
+                <FaTelegram className="w-7 h-7" />
               </Link>
               <Link
                 href="https://discord.gg/vzBRFtcR"
