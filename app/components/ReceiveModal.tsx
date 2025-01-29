@@ -68,7 +68,7 @@ const ReceiveModal = ({ isOpen, onClose, walletAddress }: ReceiveModalProps) => 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="container-neumorphic rounded-2xl p-6 max-w-md w-full relative">
+      <div className="container-neumorphic rounded-2xl p-4 sm:p-6 max-w-md w-full relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-white/60 hover:text-white/90 transition-colors"

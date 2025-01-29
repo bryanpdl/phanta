@@ -325,11 +325,11 @@ const PhantomWallet = () => {
                   tokenBalance={tokenBalance || 0}
                 />
               )}
-              
-              <div className="w-[400px] container-neumorphic rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h1 className="text-3xl font-bold text-white/90 flex items-center gap-3">
-                    <div className="relative w-10 h-10 rounded-full overflow-hidden">
+              {/* Wallet Container */}
+              <div className="w-full sm:w-[400px] container-neumorphic rounded-2xl p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white/90 flex items-center gap-2 sm:gap-3">
+                    <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden">
                       <Image
                         src="/fred-mascot3.png"
                         alt="Fred mascot"
@@ -343,20 +343,20 @@ const PhantomWallet = () => {
                   {walletAddress && (
                     <button
                       onClick={() => setShowTransactions(true)}
-                      className="bg-secondary text-white/90 p-2 rounded-lg transition-all hover:brightness-110 shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-4px_0_var(--secondary-shadow)] hover:shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-6px_0_var(--secondary-shadow)] active:shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-1px_0_var(--secondary-shadow)] active:translate-y-[3px]"
+                      className="bg-secondary text-white/90 p-1.5 sm:p-2 rounded-lg transition-all hover:brightness-110 shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-4px_0_var(--secondary-shadow)] hover:shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-6px_0_var(--secondary-shadow)] active:shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-1px_0_var(--secondary-shadow)] active:translate-y-[3px]"
                       title="View Transactions"
                     >
-                      <HiClock className="w-5 h-5" />
+                      <HiClock className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   )}
                 </div>
 
-                <div className="space-y-6">
-      {walletAddress ? (
-        <>
-                      <div className="bg-accent rounded-lg p-4">
+                <div className="space-y-4 sm:space-y-6">
+                  {walletAddress ? (
+                    <>
+                      <div className="bg-accent rounded-lg p-3 sm:p-4">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="text-white/60 text-sm">Wallet Address</p>
+                          <p className="text-white/60 text-xs sm:text-sm">Wallet Address</p>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={copyAddress}
@@ -364,9 +364,9 @@ const PhantomWallet = () => {
                               title="Copy address"
                             >
                               {copied ? (
-                                <HiClipboardCheck className="w-4 h-4" />
+                                <HiClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               ) : (
-                                <HiClipboard className="w-4 h-4" />
+                                <HiClipboard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               )}
                             </button>
                             <button
@@ -374,14 +374,14 @@ const PhantomWallet = () => {
                               className="text-white/60 hover:text-white/90 transition-colors p-1"
                               title="View on Solana Explorer"
                             >
-                              <HiExternalLink className="w-4 h-4" />
+                              <HiExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </button>
                           </div>
                         </div>
-                        <p className="text-white/90 font-mono text-sm break-all">{walletAddress}</p>
+                        <p className="text-white/90 font-mono text-xs sm:text-sm break-all">{walletAddress}</p>
                       </div>
                       
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         <div className="flex items-center justify-between">
                           <h2 className="text-white/90 text-lg font-medium">Balance</h2>
                           <button
@@ -487,37 +487,37 @@ const PhantomWallet = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setIsSendModalOpen(true)}
-                          className="flex-1 btn-primary text-white/90 font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                          className="flex-1 btn-primary text-white/90 font-medium py-2 px-3 sm:px-4 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
                         >
                           Send
-                          <HiArrowRight className="w-4 h-4" />
+                          <HiArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                         <button
                           onClick={() => setIsReceiveModalOpen(true)}
-                          className="flex-1 btn-primary text-white/90 font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                          className="flex-1 btn-primary text-white/90 font-medium py-2 px-3 sm:px-4 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
                         >
                           Receive
-                          <HiArrowDown className="w-4 h-4" />
+                          <HiArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       </div>
 
                       <button
                         onClick={handleDisconnect}
-                        className="w-full bg-accent/30 hover:bg-accent/50 text-white/90 font-medium py-2.5 px-4 rounded-lg transition-all border border-transparent hover:border-white/10"
+                        className="w-full bg-accent/30 hover:bg-accent/50 text-white/90 font-medium py-2 px-3 sm:px-4 rounded-lg transition-all border border-transparent hover:border-white/10 text-sm sm:text-base"
                       >
                         Disconnect Wallet
                       </button>
-        </>
-      ) : (
+                    </>
+                  ) : (
                     <button
                       onClick={handleConnect}
-                      className="w-full btn-primary text-white/90 font-medium py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                      className="w-full btn-primary text-white/90 font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
                     >
                       <Image
                         src="/phantom-logo.svg"
                         alt="Phantom"
-                        width={20}
-                        height={20}
+                        width={18}
+                        height={18}
                         className="opacity-80"
                       />
                       Connect Phantom Wallet
@@ -536,7 +536,7 @@ const PhantomWallet = () => {
               className="w-full max-w-xl mx-auto"
             >
               {/* Recent Transactions Container */}
-              <div className="container-neumorphic rounded-2xl p-6">
+              <div className="container-neumorphic rounded-2xl p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-6">
                   <button
                     onClick={() => setShowTransactions(false)}
