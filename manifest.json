@@ -1,6 +1,6 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "fred.fun",
+  "short_name": "FRED",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
