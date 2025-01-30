@@ -376,10 +376,11 @@ const PhantomWallet = () => {
                 />
               )}
               {/* Wallet Container */}
-              <div className="w-full sm:w-[400px] container-neumorphic rounded-2xl p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white/90 flex items-center gap-2 sm:gap-3">
-                    <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden">
+              <div className="w-full sm:w-[500px] container-neumorphic rounded-2xl p-6 relative">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8">
+                  <h1 className="text-2xl font-bold text-white/90 flex items-center gap-3">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden">
                       <Image
                         src="/fred-mascot3.png"
                         alt="Fred mascot"
@@ -393,137 +394,149 @@ const PhantomWallet = () => {
                   {walletAddress && (
                     <button
                       onClick={() => setShowTransactions(true)}
-                      className="bg-secondary text-white/90 p-1.5 sm:p-2 rounded-lg transition-all hover:brightness-110 shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-4px_0_var(--secondary-shadow)] hover:shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-6px_0_var(--secondary-shadow)] active:shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-1px_0_var(--secondary-shadow)] active:translate-y-[3px]"
+                      className="bg-secondary text-white/90 p-2.5 rounded-lg transition-all hover:brightness-110 shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-4px_0_var(--secondary-shadow)] hover:shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-6px_0_var(--secondary-shadow)] active:shadow-[inset_0_1px_1px_var(--secondary-shadow-top),inset_0_-1px_0_var(--secondary-shadow)] active:translate-y-[3px]"
                       title="View Transactions"
                     >
-                      <HiClock className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <HiClock className="w-5 h-5" />
                     </button>
                   )}
                 </div>
 
-                <div className="space-y-4 sm:space-y-6">
+                <div className="space-y-6">
                   {walletAddress ? (
                     <>
-                      <div className="bg-accent rounded-lg p-3 sm:p-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-white/60 text-xs sm:text-sm">Wallet Address</p>
+                      {/* Address Container */}
+                      <div className="bg-accent/50 rounded-xl p-4 border border-white/5">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-white/60 text-sm font-medium">Wallet Address</p>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={copyAddress}
-                              className="text-white/60 hover:text-white/90 transition-colors p-1"
+                              className="text-white/60 hover:text-white/90 transition-colors p-1.5 hover:bg-white/5 rounded-lg"
                               title="Copy address"
                             >
                               {copied ? (
-                                <HiClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <HiClipboardCheck className="w-4 h-4" />
                               ) : (
-                                <HiClipboard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <HiClipboard className="w-4 h-4" />
                               )}
                             </button>
                             <button
                               onClick={viewOnExplorer}
-                              className="text-white/60 hover:text-white/90 transition-colors p-1"
+                              className="text-white/60 hover:text-white/90 transition-colors p-1.5 hover:bg-white/5 rounded-lg"
                               title="View on Solana Explorer"
                             >
-                              <HiExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              <HiExternalLink className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
-                        <p className="text-white/90 font-mono text-xs sm:text-sm break-all">{walletAddress}</p>
+                        <p className="text-white/90 font-mono text-sm break-all">{walletAddress}</p>
                       </div>
                       
-                      <div className="space-y-3 sm:space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h2 className="text-white/90 text-lg font-medium">Balance</h2>
-                          <button
-                            onClick={fetchBalance}
-                            disabled={isBalanceLoading}
-                            className="group p-2 hover:bg-white/5 rounded-lg transition-colors duration-200"
-                          >
-                            <HiRefresh className={`w-4 h-4 text-white/60 ${isBalanceLoading ? 'animate-spin' : ''}`} />
-                          </button>
+                      {/* Balance Section */}
+                      <div className="bg-accent/50 rounded-xl border border-white/5">
+                        {/* Header */}
+                        <div className="p-4 border-b border-white/5">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-semibold text-white/90">Balance</h2>
+                            <button
+                              onClick={fetchBalance}
+                              disabled={isBalanceLoading}
+                              className="p-2 hover:bg-white/5 rounded-lg transition-colors duration-200"
+                            >
+                              <HiRefresh className={`w-4 h-4 text-white/60 ${isBalanceLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                          </div>
                         </div>
                         
                         {/* SOL Balance */}
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Image
-                                src="/solana-logo.svg"
-                                alt="Solana"
-                                width={24}
-                                height={24}
-                                className="rounded-full"
-                              />
-                              <p className="text-xl font-medium text-white">
+                        <div className="p-4 border-b border-white/5">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="relative w-8 h-8">
+                                <Image
+                                  src="/solana-logo.svg"
+                                  alt="Solana"
+                                  width={32}
+                                  height={32}
+                                  className="rounded-full"
+                                />
+                              </div>
+                              <p className="text-lg font-semibold text-white">
                                 SOL
                               </p>
                             </div>
-                            <p className="text-white/90 font-mono">
-                              {solPrice ? `$${solPrice.toFixed(2)}` : "Loading..."} USD
+                            <p className="text-white/60 text-sm font-medium">
+                              ${solPrice ? solPrice.toFixed(2) : "Loading..."} USD
                             </p>
                           </div>
-                          <div className="space-y-0.5">
-                            <p className="text-2xl font-medium text-white">
+                          <div className="space-y-1">
+                            <p className="text-2xl font-semibold text-white">
                               {balance !== null ? balance.toLocaleString() : "Loading..."} SOL
                             </p>
                             {balance !== null && solPrice && (
-                              <p className="text-white/60 text-sm">
+                              <p className="text-white/40 text-sm">
                                 ≈ ${(balance * solPrice).toFixed(2)} USD
                               </p>
                             )}
                           </div>
                         </div>
 
+                        {/* Swap direction Button */}
+                        <div className="relative h-[1px]">
+                          <div className="absolute left-0 right-0 top-0 border-b border-white/5" />
+                          <button
+                            onClick={() => setIsSwapModalOpen(true)}
+                            className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background p-2.5 rounded-lg transition-all hover:brightness-110 shadow-[inset_0_1px_1px_var(--container-shadow-top),inset_0_-4px_0_var(--container-shadow)] hover:shadow-[inset_0_1px_1px_var(--container-shadow-top),inset_0_-6px_0_var(--container-shadow)] active:shadow-[inset_0_1px_1px_var(--container-shadow-top),inset_0_-1px_0_var(--container-shadow)] border border-white/5 z-10"
+                            title="Swap Tokens"
+                          >
+                            <HiArrowsUpDown className="w-5 h-5 text-white" />
+                          </button>
+                        </div>
+
                         {/* Token Info */}
                         {tokenInfo && (
-                          <div className="relative pt-4 border-t border-white/10">
-                            <button
-                              onClick={() => setIsSwapModalOpen(true)}
-                              className="absolute -top-4 left-1/2 -translate-x-1/2 bg-background p-2 rounded-lg transition-all hover:brightness-110 shadow-[inset_0_1px_1px_var(--container-shadow-top),inset_0_-4px_0_var(--container-shadow)] hover:shadow-[inset_0_1px_1px_var(--container-shadow-top),inset_0_-6px_0_var(--container-shadow)] active:shadow-[inset_0_1px_1px_var(--container-shadow-top),inset_0_-1px_0_var(--container-shadow)] active:translate-y-[3px]"
-                              title="Swap Tokens"
-                            >
-                              <HiArrowsUpDown className="w-5 h-5 text-white" />
-                            </button>
-                            <div className="space-y-1">
+                          <div className="p-4 relative">
+                            <div className="space-y-3">
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2.5">
                                   {tokenInfo.info?.imageUrl && (
-                                    <Image
-                                      src={tokenInfo.info.imageUrl}
-                                      alt={tokenInfo.baseToken.symbol}
-                                      width={24}
-                                      height={24}
-                                      className="rounded-full"
-                                    />
+                                    <div className="relative w-8 h-8">
+                                      <Image
+                                        src={tokenInfo.info.imageUrl}
+                                        alt={tokenInfo.baseToken.symbol}
+                                        width={32}
+                                        height={32}
+                                        className="rounded-full"
+                                      />
+                                    </div>
                                   )}
-                                  <p className="text-xl font-medium text-white">
+                                  <p className="text-lg font-semibold text-white">
                                     {tokenInfo.baseToken.symbol}
                                   </p>
                                 </div>
-                                <p className="text-white/90 font-mono flex items-baseline">
+                                <p className="text-white/60 text-sm font-medium flex items-baseline">
                                   {formatTokenPrice(tokenInfo.priceUsd)}
                                 </p>
                               </div>
-                              <div className="space-y-0.5">
-                                {/* Token Balance */}
+                              <div className="space-y-1">
                                 {tokenBalance !== null && (
-                                  <p className="text-2xl font-medium text-white">
+                                  <p className="text-2xl font-semibold text-white">
                                     {tokenBalance.toLocaleString()} {tokenInfo.baseToken.symbol}
                                   </p>
                                 )}
-                                {/* Token Value in USD */}
                                 {tokenBalance !== null && tokenInfo.priceUsd && (
-                                  <p className="text-white/60 text-sm">
+                                  <p className="text-white/40 text-sm">
                                     ≈ ${(tokenBalance * parseFloat(tokenInfo.priceUsd)).toFixed(2)} USD
                                   </p>
                                 )}
                                 {tokenInfo.marketCap && (
-                                  <p className="text-white/60 text-sm">
+                                  <p className="text-white/40 text-sm">
                                     Market Cap: ${tokenInfo.marketCap.toLocaleString()}
                                   </p>
                                 )}
                                 {tokenInfo.liquidity?.usd && (
-                                  <p className="text-white/60 text-sm">
+                                  <p className="text-white/40 text-sm">
                                     24h Volume: ${tokenInfo.liquidity.usd.toLocaleString()}
                                   </p>
                                 )}
@@ -537,23 +550,23 @@ const PhantomWallet = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setIsSendModalOpen(true)}
-                          className="flex-1 btn-primary text-white/90 font-medium py-2 px-3 sm:px-4 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
+                          className="flex-1 btn-primary text-white/90 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base"
                         >
                           Send
-                          <HiArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <HiArrowRight className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setIsReceiveModalOpen(true)}
-                          className="flex-1 btn-primary text-white/90 font-medium py-2 px-3 sm:px-4 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
+                          className="flex-1 btn-primary text-white/90 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base"
                         >
                           Receive
-                          <HiArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <HiArrowDown className="w-4 h-4" />
                         </button>
                       </div>
 
                       <button
                         onClick={handleDisconnect}
-                        className="w-full bg-accent/30 hover:bg-accent/50 text-white/90 font-medium py-2 px-3 sm:px-4 rounded-lg transition-all border border-transparent hover:border-white/10 text-sm sm:text-base"
+                        className="w-full bg-accent/30 hover:bg-accent/50 text-white/90 font-bold py-4 rounded-xl transition-all border border-white/5 hover:border-white/10 text-base"
                       >
                         Disconnect Wallet
                       </button>
@@ -561,13 +574,13 @@ const PhantomWallet = () => {
                   ) : (
                     <button
                       onClick={handleConnect}
-                      className="w-full btn-primary text-white/90 font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
+                      className="w-full btn-primary text-white/90 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base"
                     >
                       <Image
                         src="/phantom-logo.svg"
                         alt="Phantom"
-                        width={18}
-                        height={18}
+                        width={20}
+                        height={20}
                         className="opacity-80"
                       />
                       Connect Phantom Wallet
@@ -586,29 +599,29 @@ const PhantomWallet = () => {
               className="w-full max-w-xl mx-auto"
             >
               {/* Recent Transactions Container */}
-              <div className="container-neumorphic rounded-2xl p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <button
-                    onClick={() => setShowTransactions(false)}
-                    className="text-white/60 hover:text-white/90 transition-colors flex items-center gap-2"
-                  >
-                    <HiArrowLeft className="w-5 h-5" />
-                    Back to Wallet
-                  </button>
+              <div className="container-neumorphic rounded-2xl p-6 w-full relative">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowTransactions(false)}
+                      className="text-white/60 hover:text-white/90 transition-colors p-1 hover:bg-white/5 rounded-lg"
+                    >
+                      <HiArrowLeft className="w-6 h-6" />
+                    </button>
+                    <h2 className="text-2xl font-bold text-white/90">Recent Transactions</h2>
+                  </div>
                   <button
                     onClick={fetchTransactions}
-                    className="text-white/60 hover:text-white/90 transition-colors group"
                     disabled={isTransactionsLoading}
+                    className="p-2 hover:bg-white/5 rounded-lg transition-colors duration-200"
                   >
-                    <HiRefresh className={`w-5 h-5 ${isTransactionsLoading ? 'animate-spin' : ''}`} />
+                    <HiRefresh className={`w-5 h-5 text-white/60 ${isTransactionsLoading ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
-                
-                <h2 className="text-xl font-bold text-white/90 mb-4">Recent Transactions</h2>
-                <TransactionList
-                  transactions={transactions}
-                  isLoading={isTransactionsLoading}
-                />
+
+                <div className="bg-accent/50 rounded-xl border border-white/5">
+                  <TransactionList transactions={transactions} isLoading={isLoading} />
+                </div>
               </div>
             </motion.div>
           )}

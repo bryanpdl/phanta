@@ -11,7 +11,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #10100f;
-    --foreground: #1f201fce;
+    --foreground: #1f201fd2;
     --accent: #2f302f;
     --accent-shadow: #252625;
     --accent-shadow-top: rgba(255, 255, 255, 0.03);

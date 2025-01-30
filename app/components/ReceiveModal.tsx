@@ -67,18 +67,18 @@ const ReceiveModal = ({ isOpen, onClose, walletAddress }: ReceiveModalProps) => 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="container-neumorphic rounded-2xl p-4 sm:p-6 max-w-md w-full relative">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="container-neumorphic rounded-2xl p-6 max-w-[420px] w-full relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-white/60 hover:text-white/90 transition-colors"
+          className="absolute top-6 right-6 text-white/60 hover:text-white/90 transition-colors"
         >
           <HiX className="w-5 h-5" />
         </button>
-        <h2 className="text-xl font-bold text-white/90 mb-6">Receive SOL</h2>
+        <h2 className="text-2xl font-bold text-white/90 mb-8">Receive SOL</h2>
 
-        <div className="flex flex-col items-center space-y-4">
-          <div className="bg-white p-4 rounded-xl">
+        <div className="flex flex-col items-center space-y-6">
+          <div className="bg-white p-6 rounded-xl">
             <QRCodeSVG
               value={walletAddress}
               size={200}
@@ -94,38 +94,38 @@ const ReceiveModal = ({ isOpen, onClose, walletAddress }: ReceiveModalProps) => 
             />
           </div>
 
-          <div className="w-full space-y-2">
-            <p className="text-white/60 text-sm">Wallet Address</p>
-            <div className="bg-accent/50 rounded-lg p-3">
+          <div className="w-full space-y-4">
+            <label className="block text-white/60 text-sm font-medium">Wallet Address</label>
+            <div className="bg-foreground rounded-xl p-4 border border-white/5">
               <p className="text-white/90 font-mono text-sm break-all">{walletAddress}</p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={copyAddress}
-                className="flex-1 btn-primary text-white/90 font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                className="flex-1 btn-primary text-white/90 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base"
               >
                 {copiedAddress ? (
-                  <HiClipboardCheck className="w-4 h-4" />
+                  <HiClipboardCheck className="w-5 h-5" />
                 ) : (
-                  <HiClipboard className="w-4 h-4" />
+                  <HiClipboard className="w-5 h-5" />
                 )}
                 Copy Address
               </button>
               <button
                 onClick={copyQRCode}
-                className="flex-1 btn-primary text-white/90 font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                className="flex-1 btn-primary text-white/90 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base"
               >
                 {copiedQR ? (
-                  <HiClipboardCheck className="w-4 h-4" />
+                  <HiClipboardCheck className="w-5 h-5" />
                 ) : (
-                  <HiCode className="w-4 h-4" />
+                  <HiCode className="w-5 h-5" />
                 )}
                 Embed QR
               </button>
             </div>
           </div>
 
-          <p className="text-white/40 text-xs text-center">
+          <p className="text-white/40 text-sm text-center">
             This address can only be used to receive SOL and SPL tokens
           </p>
         </div>
