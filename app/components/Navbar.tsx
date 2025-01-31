@@ -67,7 +67,7 @@ const Navbar = () => {
             Tokenomics
           </Link>
           <Link
-            href="https://dexscreener.com"
+            href="https://dexscreener.com/solana/ayftwlahk5nu88h7z4y5p2q7d1lmr4mjd6svhsmfzqbb"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:opacity-80 transition-opacity"

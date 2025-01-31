@@ -38,7 +38,7 @@ const RoadmapFooter = () => {
         
         {/* Buy Token Button */}
         <Link
-          href="https://dexscreener.com/solana/fiyyt5ri8t16vxy1ceubhs2nmybnzxlvkxwewfq2moon"
+          href="https://dexscreener.com/solana/ayftwlahk5nu88h7z4y5p2q7d1lmr4mjd6svhsmfzqbb"
           target="_blank"
           rel="noopener noreferrer"
           className={`
