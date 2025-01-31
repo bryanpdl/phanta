@@ -117,7 +117,7 @@ const connection = new Connection(
 // Fee configuration - single source of truth
 const NETWORK_FEE_ESTIMATE = 0.00015; // ~0.00015 SOL per transaction
 const MIN_FEE_SOL = 0.001; // Minimum fee base
-const BASE_FEE_PERCENTAGE = 0.003; // 0.3% fee
+const BASE_FEE_PERCENTAGE = 0.01; // 1% fee
 const MIN_TRANSACTION_AMOUNT = 0.0023; // Minimum total transaction amount
 const FEE_RECIPIENT = new PublicKey("Ccjx1HT5x7NLertCeC8pBJFH2PMsNKYU4ayKFGGmGMfS");
 

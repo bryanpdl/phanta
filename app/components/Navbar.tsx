@@ -6,6 +6,7 @@ import { useWallet } from "../context/WalletContext";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { HiMenu, HiX } from "react-icons/hi";
+import Image from "next/image";
 
 const Navbar = () => {
   const { isWalletConnected } = useWallet();
@@ -14,6 +15,10 @@ const Navbar = () => {
   const shouldShowConnectedState = isWalletConnected || isTokenomicsPage;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  const handleConnect = () => {
+    (window as any).handlePhantomConnect?.();
+  };
 
   // Handle click outside
   useEffect(() => {
@@ -47,10 +52,28 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-6">
       <div className="max-w-8xl mx-auto flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <span className={`text-4xl font-extrabold transition-all duration-300 ${shouldShowConnectedState ? 'text-secondary' : 'text-black'}`}>fred.fun</span>
-        </Link>
+        {/* Logo and Connect Button Group */}
+        <div className="flex items-center gap-6">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <span className={`text-4xl font-extrabold transition-all duration-300 ${shouldShowConnectedState ? 'text-secondary' : 'text-black'}`}>fred.fun</span>
+          </Link>
+          
+          {!isWalletConnected && (
+            <button
+              onClick={handleConnect}
+              className="hidden sm:flex items-center gap-2 font-bold px-6 py-3 rounded-lg transition-all hover:brightness-110 bg-primary text-white shadow-[inset_0_1px_1px_var(--primary-shadow-top),inset_0_-4px_0_var(--primary-shadow)] hover:shadow-[inset_0_1px_1px_var(--primary-shadow-top),inset_0_-6px_0_var(--primary-shadow)] active:shadow-[inset_0_1px_1px_var(--primary-shadow-top),inset_0_-1px_0_var(--primary-shadow)] active:translate-y-[3px]"
+            >
+              <Image
+                src="/phantom-logo.svg"
+                alt="Phantom"
+                width={16}
+                height={16}
+                className="opacity-80"
+              />
+              Connect Wallet
+            </button>
+          )}
+        </div>
 
         {/* Desktop Navigation */}
         <div className="hidden sm:flex items-center gap-6">
@@ -159,9 +182,28 @@ const Navbar = () => {
               Tokenomics
             </Link>
 
+            {!isWalletConnected && (
+              <button
+                onClick={() => {
+                  handleConnect();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 font-bold px-6 py-3 rounded-lg transition-all hover:brightness-110 bg-primary text-white shadow-[inset_0_1px_1px_var(--primary-shadow-top),inset_0_-4px_0_var(--primary-shadow)] hover:shadow-[inset_0_1px_1px_var(--primary-shadow-top),inset_0_-6px_0_var(--primary-shadow)] active:shadow-[inset_0_1px_1px_var(--primary-shadow-top),inset_0_-1px_0_var(--primary-shadow)] active:translate-y-[3px]"
+              >
+                <Image
+                  src="/phantom-logo.svg"
+                  alt="Phantom"
+                  width={16}
+                  height={16}
+                  className="opacity-80"
+                />
+                Connect Wallet
+              </button>
+            )}
+
             <div className="flex justify-center items-center gap-8">
               <Link
-                href="https://dexscreener.com/solana/fiyyt5ri8t16vxy1ceubhs2nmybnzxlvkxwewfq2moon"
+                href="https://dexscreener.com/solana/ayftwlahk5nu88h7z4y5p2q7d1lmr4mjd6svhsmfzqbb"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setIsMobileMenuOpen(false)}

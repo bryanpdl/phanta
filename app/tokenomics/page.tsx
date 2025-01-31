@@ -54,10 +54,10 @@ const TokenomicsPage = () => {
       <Navbar />
       
       {/* Main content with padding to account for navbar and footer */}
-      <div className="pt-28 pb-32 px-4 sm:px-8">
-        <div className="max-w-8xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="pt-20 sm:pt-24 pb-24 sm:pb-28 px-4 sm:px-8">
+        <div className="max-w-8xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
           {/* Left Column */}
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-8">
             {/* Overview Section */}
             <section>
               <div className="flex items-center gap-4 mb-6">
@@ -150,11 +150,11 @@ const TokenomicsPage = () => {
           </div>
 
           {/* Right Column */}
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-8">
             {/* Liquidity Strategy Section */}
             <section>
-              <h2 className="text-xl sm:text-2xl font-semibold mb-4">Liquidity Strategy</h2>
-              <div className="bg-white/5 rounded-lg p-4 sm:p-6 space-y-6">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Liquidity Strategy</h2>
+              <div className="bg-white/5 rounded-lg p-3 sm:p-6 space-y-4 sm:space-y-6">
                 <div>
                   <h3 className="text-lg sm:text-xl font-semibold mb-3">Initial Liquidity Contribution:</h3>
                   <ul className="space-y-2 text-gray-300">
@@ -175,8 +175,8 @@ const TokenomicsPage = () => {
 
             {/* Burn Mechanism Section */}
             <section>
-              <h2 className="text-xl sm:text-2xl font-semibold mb-4">Burn Mechanism</h2>
-              <div className="bg-white/5 rounded-lg p-4 sm:p-6 space-y-4">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Burn Mechanism</h2>
+              <div className="bg-white/5 rounded-lg p-3 sm:p-6 space-y-3 sm:space-y-4">
                 <div>
                   <p className="text-gray-300">
                     1. Initial Burn: A portion of total supply burned at launch to increase scarcity.
@@ -192,8 +192,8 @@ const TokenomicsPage = () => {
 
             {/* Governance & Transparency Section */}
             <section>
-              <h2 className="text-xl sm:text-2xl font-semibold mb-4">Governance & Transparency</h2>
-              <div className="bg-white/5 rounded-lg p-4 sm:p-6">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Governance & Transparency</h2>
+              <div className="bg-white/5 rounded-lg p-3 sm:p-6">
                 <p className="text-gray-300">
                   Fred is community-driven with full transparency. All wallet allocations and
                   transactions can be verified on-chain.

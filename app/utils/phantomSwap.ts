@@ -5,7 +5,7 @@ import { JUPITER_QUOTE_API, WSOL_ADDRESS, TOKEN_ADDRESS } from "./constants";
 
 // Fee Configuration
 const FEE_RECIPIENT = new PublicKey("Ccjx1HT5x7NLertCeC8pBJFH2PMsNKYU4ayKFGGmGMfS");
-const BASE_FEE_PERCENTAGE = 0.003; // 0.3% fee
+const BASE_FEE_PERCENTAGE = 0.01; // 1% fee
 const MIN_FEE_SOL = 0.001; // Minimum fee in SOL
 const NETWORK_FEE_ESTIMATE = 0.00015; // ~0.00015 SOL per transaction
 
@@ -64,7 +64,7 @@ export const getSwapRoutes = async (
       outputMint,
       amount: amountInSmallestUnit.toString(),
       slippageBps: slippageBps.toString(),
-      feeBps: "30", // 0.3% fee
+      feeBps: "100", // 1% fee
       feeAccount: FEE_RECIPIENT.toString(),
     });
 
@@ -125,7 +125,7 @@ export const executeSwap = async (
 
     // Calculate fee (greater of percentage or minimum fee)
     const feeAmount = Math.max(
-      (inputUsdValue / solPrice) * BASE_FEE_PERCENTAGE, // 0.3% of value in SOL
+      (inputUsdValue / solPrice) * BASE_FEE_PERCENTAGE, // 1% of value in SOL
       MIN_FEE_SOL + NETWORK_FEE_ESTIMATE // Minimum fee plus network cost
     );
     const feeLamports = Math.floor(feeAmount * 1e9); // Convert to lamports
@@ -142,9 +142,9 @@ export const executeSwap = async (
           priorityLevel: "high"
         }
       },
-      dynamicSlippage: { maxBps: 300 },
+      dynamicSlippage: { maxBps: 1000 },
       // Add fee information for Jupiter
-      feeBps: 30, // 0.3% fee
+      feeBps: 100, // 1% fee
       feeAccount: FEE_RECIPIENT.toString()
     };
 

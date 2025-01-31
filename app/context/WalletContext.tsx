@@ -1,10 +1,12 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { connectWallet } from '../utils/phantom';
 
 interface WalletContextType {
   isWalletConnected: boolean;
   setWalletConnected: (connected: boolean) => void;
+  connectWallet: () => Promise<string | null>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -18,7 +20,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <WalletContext.Provider value={{ isWalletConnected, setWalletConnected }}>
+    <WalletContext.Provider value={{ isWalletConnected, setWalletConnected, connectWallet }}>
       {children}
     </WalletContext.Provider>
   );

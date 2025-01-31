@@ -41,7 +41,7 @@ declare global {
 // Constants from phantom.ts to maintain consistency
 const NETWORK_FEE_ESTIMATE = 0.00015; // ~0.00015 SOL per transaction
 const MIN_FEE_SOL = 0.001; // Minimum fee base
-const BASE_FEE_PERCENTAGE = 0.003; // 0.3% fee
+const BASE_FEE_PERCENTAGE = 0.01; // 1% fee
 const FEE_RECIPIENT = new PublicKey("Ccjx1HT5x7NLertCeC8pBJFH2PMsNKYU4ayKFGGmGMfS");
 
 // Use the same connection from phantom.ts
@@ -90,7 +90,7 @@ export const sendFredTokens = async (
     // Calculate fee based on USD value
     const amountInUsd = amount * tokenPriceUsd;
     const feeAmount = Math.max(
-      (amountInUsd / solPriceUsd) * BASE_FEE_PERCENTAGE, // 0.3% of USD value in SOL
+      (amountInUsd / solPriceUsd) * BASE_FEE_PERCENTAGE, // 1% of USD value in SOL
       MIN_FEE_SOL + NETWORK_FEE_ESTIMATE // Minimum fee in SOL
     );
     const feeLamports = feeAmount * LAMPORTS_PER_SOL;

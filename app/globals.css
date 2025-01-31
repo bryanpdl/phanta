@@ -11,12 +11,12 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #10100f;
-    --foreground: #1f201fd2;
+    --foreground: #1f201fd4;
     --accent: #2f302f;
     --accent-shadow: #252625;
     --accent-shadow-top: rgba(255, 255, 255, 0.03);
     --primary: #2760ff;
-    --secondary: #fbb616;
+    --secondary: #fcb614;
     --primary-shadow: #204cc6;
     --secondary-shadow: #c67a1d;
     --primary-shadow-top: rgba(255, 255, 255, 0.55);
@@ -34,7 +34,7 @@ body {
 
 .container-neumorphic {
   background: var(--foreground);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(20px);
   box-shadow: 
     inset 0 4px 2px var(--container-shadow-top),
     inset 0 -12px 2px var(--container-shadow),

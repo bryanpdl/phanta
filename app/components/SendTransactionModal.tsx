@@ -78,14 +78,14 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress, tokenInfo, solPr
       
       // Calculate fee in SOL based on USD value
       const serviceFeeInSol = Math.max(
-        (amountInUsd / solPriceUsd) * 0.003, // 0.3% of USD value in SOL
+        (amountInUsd / solPriceUsd) * 0.01, // 1% of USD value in SOL
         0.001 + 0.0003 // Minimum fee in SOL
       );
 
       setHasInsufficientBalance(currentBalance !== null && serviceFeeInSol > currentBalance);
     } else {
       // For SOL transfers, check total amount needed including fee
-      const serviceFee = Math.max(parsedAmount * 0.003, 0.001 + 0.0003);
+      const serviceFee = Math.max(parsedAmount * 0.01, 0.001 + 0.0003);
       const totalNeeded = parsedAmount + serviceFee;
       setHasInsufficientBalance(currentBalance !== null && totalNeeded > currentBalance);
     }
@@ -128,7 +128,7 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress, tokenInfo, solPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="container-neumorphic rounded-2xl p-6 max-w-[420px] w-full relative">
         <button
           onClick={onClose}
@@ -261,11 +261,11 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress, tokenInfo, solPr
                   <p className="text-white/90 font-medium">
                     {isSendingToken && tokenInfo ? (
                       `${Math.max(
-                        (parseFloat(amount) * parseFloat(tokenInfo.priceUsd || "0") / (solPrice || 1)) * 0.003,
+                        (parseFloat(amount) * parseFloat(tokenInfo.priceUsd || "0") / (solPrice || 1)) * 0.01,
                         0.001 + 0.0003
                       ).toFixed(6)} SOL`
                     ) : (
-                      `${Math.max(parseFloat(amount) * 0.003, 0.001 + 0.0003).toFixed(6)} SOL`
+                      `${Math.max(parseFloat(amount) * 0.01, 0.001 + 0.0003).toFixed(6)} SOL`
                     )}
                   </p>
                 </div>
@@ -274,11 +274,11 @@ const SendTransactionModal = ({ isOpen, onClose, senderAddress, tokenInfo, solPr
                     <span className="font-medium">Fee Structure</span>
                     <div className="group relative">
                       <HiInformationCircle className="w-4 h-4" />
-                      <Tooltip content="0.3% of transaction value or minimum fee of 0.00115 SOL (whichever is greater)" />
+                      <Tooltip content="1% of transaction value or minimum fee of 0.00115 SOL (whichever is greater)" />
                     </div>
                   </div>
                   <p className="text-white/60 text-sm">
-                    0.3% fee • Min ${((0.00115 * (solPrice || 0))).toFixed(3)}
+                    1% fee • Min ${((0.00115 * (solPrice || 0))).toFixed(3)}
                   </p>
                 </div>
                 <div className="flex items-center justify-between text-sm">

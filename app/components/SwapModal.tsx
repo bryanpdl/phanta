@@ -308,14 +308,29 @@ const SwapModal = ({ isOpen, onClose, walletAddress, solBalance, solPrice, token
           </div>
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1.5 text-white/60">
-              <span className="font-medium">Fees & Slippage</span>
+              <span className="font-medium">Service Fee</span>
               <div className="group relative">
                 <HiInformationCircle className="w-4 h-4" />
-                <Tooltip content="0.3% service fee for each swap • Maximum slippage tolerance of 3% to protect against price movement" />
+                <Tooltip content="1% of transaction value plus network fees" />
               </div>
             </div>
-            <p className="text-white/60 font-medium">
-              0.3% fee • Max 3% slippage
+            <p className="text-white/90 font-medium">
+              {`${Math.max(
+                (parseFloat(amount || "0") * (solPrice || 0) / (solPrice || 1)) * 0.01,
+                0.001 + 0.0003
+              ).toFixed(6)} SOL`}
+            </p>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-1.5 text-white/60">
+              <span className="font-medium">Fee Structure</span>
+              <div className="group relative">
+                <HiInformationCircle className="w-4 h-4" />
+                <Tooltip content="1% of transaction value or minimum fee of 0.00115 SOL (whichever is greater)" />
+              </div>
+            </div>
+            <p className="text-white/60 text-sm">
+              1% fee • Min ${((0.00115 * (solPrice || 0))).toFixed(3)}
             </p>
           </div>
         </div>
