@@ -131,14 +131,7 @@ const Navbar = () => {
           >
             <FaTelegram className="w-7 h-7" />
           </Link>
-          <Link
-            href="https://discord.gg/vzBRFtcR"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`transition-all duration-300 ${shouldShowConnectedState ? 'text-secondary' : 'text-black'} hover:opacity-80`}
-          >
-            <FaDiscord className="w-7 h-7" />
-          </Link>
+        
         </div>
 
         {/* Mobile Menu Button */}
@@ -247,15 +240,7 @@ const Navbar = () => {
               >
                 <FaTelegram className="w-7 h-7" />
               </Link>
-              <Link
-                href="https://discord.gg/vzBRFtcR"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-secondary hover:opacity-80 transition-opacity"
-              >
-                <FaDiscord className="w-7 h-7" />
-              </Link>
+          
             </div>
           </div>
         </div>
